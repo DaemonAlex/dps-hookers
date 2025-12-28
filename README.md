@@ -368,6 +368,25 @@ Planned features for future releases:
   - Handle customer complaints
 - [ ] **Money Laundering** - Clean dirty money through gang businesses
 
+### v3.2.0 - AI Integration (ai-npcs)
+- [ ] **AI-Powered Hookers** - Dynamic conversations with memory
+  - Remember repeat customers, preferences
+  - Context-aware dialogue (knows your gang, cash, reputation)
+  - ElevenLabs voice synthesis for immersion
+- [ ] **Trust/Reputation System** - Build relationships over time
+  - Stranger: Basic services only
+  - Acquaintance: Discounts, small talk
+  - Trusted: Intel on safe spots, police patterns
+  - Inner Circle: Exclusive services, pimp introductions
+- [ ] **AI Pimp NPC** - Intelligent quest giver
+  - Offers missions (deliveries, collections, recruitment)
+  - Shares intel about police heat, rival operations
+  - Remembers your history, adjusts dialogue
+- [ ] **Hooker Personalities** - Each worker has unique traits
+  - Some chatty, some quiet
+  - Preferences and turn-offs
+  - Backstories that unfold with trust
+
 ### Ideas Backlog
 - [ ] **Wandering Hookers** - NPCs that walk the streets at night, can be flagged down
 - [ ] Drug-fueled services (higher risk, more stress relief)
@@ -376,6 +395,7 @@ Planned features for future releases:
 - [ ] Reviews system (reputation affects prices)
 - [ ] Multiplayer services (requires 2 players)
 - [ ] Hotel/motel room rentals for privacy bonus
+- [ ] Blackmail system (hookers can extort repeat customers)
 
 ---
 
