@@ -287,12 +287,14 @@ RegisterServerEvent('dps-hookers:server:policeRoll', function(coords, witnessCou
     -- Calculate police risk chance
     local riskChance, reasons = Config.CalculatePoliceRisk(coords)
 
-    -- Bonus risk for multiple witnesses
-    if witnessCount > 1 then
-        local witnessBonus = math.min(witnessCount * 5, 25)  -- +5% per witness, max +25%
+    -- Bonus risk for multiple witnesses (scaled by multiplier)
+    if witnessCount > 0 then
+        local multiplier = Config.Police.WitnessMultiplier or 1.0
+        local witnessBonus = math.min(math.floor(witnessCount * 5 * multiplier), 40)  -- Scaled per witness, max +40%
         riskChance = riskChance + witnessBonus
         reasons.witnesses = witnessCount
         reasons.witnessBonus = witnessBonus
+        reasons.witnessMultiplier = multiplier
     end
 
     -- Roll the dice

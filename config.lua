@@ -96,7 +96,8 @@ Config.Police = {
 
     -- Witness system: Require nearby NPC to "see" the act before dispatch
     RequireWitness = true,
-    WitnessRadius = 30.0,  -- How close a ped must be to witness
+    WitnessRadius = 40.0,  -- How close a ped must be to witness (increased for high-pop)
+    WitnessMultiplier = 1.5,  -- Risk multiplier per witness (1.5 = +50% per witness)
 
     -- Delayed dispatch for secluded areas (simulates bystander finding scene later)
     DelayedDispatch = {
@@ -132,7 +133,23 @@ Config.Police = {
             enabled = true,
             modifier = -20,  -- -20% in alleys/isolated areas (strong reward)
             -- Auto-detected: <5 nearby peds and <3 nearby vehicles
-            requiresCheck = true
+            requiresCheck = true,
+            -- Known safe spots (add your server's popular hideouts)
+            knownSpots = {
+                -- Back alleys
+                {coords = vector3(140.0, -1270.0, 29.0), radius = 30.0},   -- Behind Vanilla Unicorn
+                {coords = vector3(-55.0, -1230.0, 28.0), radius = 25.0},   -- Strawberry back alley
+                {coords = vector3(485.0, -1310.0, 29.0), radius = 30.0},   -- La Mesa alley
+                -- Parking structures (dark corners)
+                {coords = vector3(215.0, -785.0, 31.0), radius = 40.0},    -- Legion Square parking
+                {coords = vector3(-335.0, -935.0, 31.0), radius = 35.0},   -- Pillbox Hill parking
+                -- Under bridges/overpasses
+                {coords = vector3(-530.0, -1150.0, 22.0), radius = 50.0},  -- Under Olympic Fwy
+                {coords = vector3(725.0, -1275.0, 25.0), radius = 40.0},   -- Under La Mesa overpass
+                -- Remote areas
+                {coords = vector3(2700.0, 3400.0, 55.0), radius = 100.0},  -- Sandy Shores outskirts
+                {coords = vector3(-1820.0, 2050.0, 140.0), radius = 80.0}, -- Zancudo River
+            }
         },
 
         -- Industrial areas = lower risk (fewer civilians)
@@ -301,14 +318,33 @@ function Config.CalculatePoliceRisk(playerCoords)
 
     -- Secluded check (if no other zone matched and enabled)
     if Config.Police.LocationRisk.Secluded.enabled and not reasons.location then
-        -- Check if area is secluded (few nearby peds/vehicles)
-        local nearbyPeds = #(GetGamePool('CPed'))
-        local nearbyVehicles = #(GetGamePool('CVehicle'))
+        local isKnownSpot = false
 
-        if nearbyPeds < 5 and nearbyVehicles < 3 then
+        -- First check known safe spots
+        if Config.Police.LocationRisk.Secluded.knownSpots then
+            for _, spot in ipairs(Config.Police.LocationRisk.Secluded.knownSpots) do
+                if #(playerCoords - spot.coords) <= spot.radius then
+                    isKnownSpot = true
+                    break
+                end
+            end
+        end
+
+        if isKnownSpot then
+            -- Known safe spot - guaranteed secluded bonus
             totalRisk = totalRisk + Config.Police.LocationRisk.Secluded.modifier
-            reasons.location = 'Secluded area'
+            reasons.location = 'Known safe spot'
             reasons.locationMod = Config.Police.LocationRisk.Secluded.modifier
+        elseif Config.Police.LocationRisk.Secluded.requiresCheck then
+            -- Dynamic check: few nearby peds/vehicles
+            local nearbyPeds = #(GetGamePool('CPed'))
+            local nearbyVehicles = #(GetGamePool('CVehicle'))
+
+            if nearbyPeds < 5 and nearbyVehicles < 3 then
+                totalRisk = totalRisk + Config.Police.LocationRisk.Secluded.modifier
+                reasons.location = 'Secluded area'
+                reasons.locationMod = Config.Police.LocationRisk.Secluded.modifier
+            end
         end
     end
 

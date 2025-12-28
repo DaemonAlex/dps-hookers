@@ -259,6 +259,18 @@ dps-hookers/
 - **Entity state bags** - Proper ownership tracking
 - **Automatic model unloading** - Memory efficient
 
+### OneSync Requirements
+
+This script uses **Entity State Bags** for hooker ownership tracking. Ensure your server has:
+
+```cfg
+# server.cfg
+set onesync on
+set onesync_population true
+```
+
+State bags prevent "network floods" and ensure proper entity sync across all clients.
+
 ---
 
 ## Debug Mode
@@ -329,11 +341,13 @@ Planned features for future releases:
 - [ ] **Hooker Preferences** - Some refuse certain services
 
 ### Ideas Backlog
+- [ ] **Wandering Hookers** - NPCs that walk the streets at night, can be flagged down
 - [ ] Drug-fueled services (higher risk, more stress relief)
 - [ ] Robbery chance (hooker steals your money)
 - [ ] Phone ordering system (qs-smartphone integration)
 - [ ] Reviews system (reputation affects prices)
 - [ ] Multiplayer services (requires 2 players)
+- [ ] Hotel/motel room rentals for privacy bonus
 
 ---
 
