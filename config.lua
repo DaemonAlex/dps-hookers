@@ -87,7 +87,18 @@ Config.Police = {
 
     -- Dispatch system to use
     -- Options: 'ps-dispatch', 'cd_dispatch', 'qs-dispatch', 'custom', 'none'
-    DispatchType = 'ps-dispatch',
+    DispatchType = 'qs-dispatch',
+
+    -- Witness system: Require nearby NPC to "see" the act before dispatch
+    RequireWitness = true,
+    WitnessRadius = 30.0,  -- How close a ped must be to witness
+
+    -- Delayed dispatch for secluded areas (simulates bystander finding scene later)
+    DelayedDispatch = {
+        enabled = true,
+        secludedDelay = {min = 30000, max = 60000},  -- 30-60 second delay in secluded areas
+        normalDelay = {min = 5000, max = 15000},      -- 5-15 second delay normally
+    },
 
     -- Base chance of police being called (percentage)
     BaseChance = 15,

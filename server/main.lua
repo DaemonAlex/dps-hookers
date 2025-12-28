@@ -253,7 +253,7 @@ RegisterServerEvent('dps-hookers:server:pay', function(data)
 end)
 
 --- Handle police dispatch roll
-RegisterServerEvent('dps-hookers:server:policeRoll', function(coords)
+RegisterServerEvent('dps-hookers:server:policeRoll', function(coords, witnessCount)
     local src = source
 
     if not Config.Police.Enabled then return end
@@ -269,8 +269,25 @@ RegisterServerEvent('dps-hookers:server:policeRoll', function(coords)
         end
     end
 
+    -- Witness check: If enabled, require at least 1 witness NPC
+    witnessCount = witnessCount or 0
+    if Config.Police.RequireWitness and witnessCount < 1 then
+        if Config.Debug then
+            print(("[DPS Hookers] No witnesses for %s - no dispatch"):format(GetPlayerName(src)))
+        end
+        return
+    end
+
     -- Calculate police risk chance
     local riskChance, reasons = Config.CalculatePoliceRisk(coords)
+
+    -- Bonus risk for multiple witnesses
+    if witnessCount > 1 then
+        local witnessBonus = math.min(witnessCount * 5, 25)  -- +5% per witness, max +25%
+        riskChance = riskChance + witnessBonus
+        reasons.witnesses = witnessCount
+        reasons.witnessBonus = witnessBonus
+    end
 
     -- Roll the dice
     local roll = math.random(1, 100)
@@ -293,98 +310,124 @@ RegisterServerEvent('dps-hookers:server:policeRoll', function(coords)
         local streetHash, _ = GetStreetNameAtCoord(coords.x, coords.y, coords.z)
         local streetName = GetStreetNameFromHashKey(streetHash) or 'Unknown Location'
 
-        -- Trigger police dispatch based on configured system
-        local dispatchSuccess = false
+        -- Calculate dispatch delay based on location
+        local dispatchDelay = 0
+        if Config.Police.DelayedDispatch and Config.Police.DelayedDispatch.enabled then
+            local isSecluded = reasons.location == 'Secluded area' or reasons.location == 'Industrial zone'
 
-        if Config.Police.DispatchType == 'ps-dispatch' then
-            local ok, err = pcall(function()
-                exports['ps-dispatch']:SuspiciousActivity({
-                    message = lib.locale('police.dispatch_message'),
-                    coords = coords,
-                    street = streetName,
-                    description = lib.locale('police.dispatch_street', {street = streetName}),
-                    radius = Config.Police.BlipRadius,
-                    sprite = 480,
-                    color = 1,
-                    scale = 1.0,
-                    length = Config.Police.BlipDuration
-                })
-            end)
-            dispatchSuccess = ok
-            if not ok and Config.Debug then
-                print(("[DPS Hookers] ps-dispatch error: %s"):format(tostring(err)))
+            if isSecluded then
+                local delayConfig = Config.Police.DelayedDispatch.secludedDelay
+                dispatchDelay = math.random(delayConfig.min, delayConfig.max)
+            else
+                local delayConfig = Config.Police.DelayedDispatch.normalDelay
+                dispatchDelay = math.random(delayConfig.min, delayConfig.max)
             end
 
-        elseif Config.Police.DispatchType == 'cd_dispatch' then
-            local ok, err = pcall(function()
-                TriggerEvent('cd_dispatch:AddNotification', {
-                    job_table = {'police'},
-                    coords = coords,
-                    title = lib.locale('police.dispatch_code') .. ' - ' .. lib.locale('police.dispatch_title'),
-                    message = lib.locale('police.dispatch_street', {street = streetName}),
-                    flash = 0,
-                    unique_id = tostring(math.random(0000000, 9999999)),
-                    blip = {
-                        sprite = 480,
-                        scale = 1.0,
-                        colour = 1,
-                        flashes = false,
-                        text = lib.locale('police.dispatch_code'),
-                        time = (Config.Police.BlipDuration * 1000),
-                        sound = 1,
-                    }
-                })
-            end)
-            dispatchSuccess = ok
-            if not ok and Config.Debug then
-                print(("[DPS Hookers] cd_dispatch error: %s"):format(tostring(err)))
+            if Config.Debug then
+                print(("[DPS Hookers] Dispatch delayed by %dms for %s"):format(dispatchDelay, GetPlayerName(src)))
             end
-
-        elseif Config.Police.DispatchType == 'qs-dispatch' then
-            local ok, err = pcall(function()
-                exports['qs-dispatch']:SuspiciousActivity(coords, lib.locale('police.dispatch_message'))
-            end)
-            dispatchSuccess = ok
-            if not ok and Config.Debug then
-                print(("[DPS Hookers] qs-dispatch error: %s"):format(tostring(err)))
-            end
-
-        elseif Config.Police.DispatchType == 'custom' then
-            local ok, err = pcall(function()
-                TriggerEvent('police:dispatch', {
-                    code = lib.locale('police.dispatch_code'),
-                    title = lib.locale('police.dispatch_title'),
-                    message = lib.locale('police.dispatch_message'),
-                    coords = coords,
-                    street = streetName,
-                    radius = Config.Police.BlipRadius,
-                    duration = Config.Police.BlipDuration
-                })
-            end)
-            dispatchSuccess = ok
-            if not ok and Config.Debug then
-                print(("[DPS Hookers] custom dispatch error: %s"):format(tostring(err)))
-            end
-
-        elseif Config.Police.DispatchType == 'none' then
-            -- No dispatch, just notify player
-            dispatchSuccess = true
         end
 
-        -- Notify player
+        -- Function to actually send the dispatch
+        local function sendDispatch()
+            local dispatchSuccess = false
+
+            if Config.Police.DispatchType == 'ps-dispatch' then
+                local ok, err = pcall(function()
+                    exports['ps-dispatch']:SuspiciousActivity({
+                        message = lib.locale('police.dispatch_message'),
+                        coords = coords,
+                        street = streetName,
+                        description = lib.locale('police.dispatch_street', {street = streetName}),
+                        radius = Config.Police.BlipRadius,
+                        sprite = 480,
+                        color = 1,
+                        scale = 1.0,
+                        length = Config.Police.BlipDuration
+                    })
+                end)
+                dispatchSuccess = ok
+                if not ok and Config.Debug then
+                    print(("[DPS Hookers] ps-dispatch error: %s"):format(tostring(err)))
+                end
+
+            elseif Config.Police.DispatchType == 'cd_dispatch' then
+                local ok, err = pcall(function()
+                    TriggerEvent('cd_dispatch:AddNotification', {
+                        job_table = {'police'},
+                        coords = coords,
+                        title = lib.locale('police.dispatch_code') .. ' - ' .. lib.locale('police.dispatch_title'),
+                        message = lib.locale('police.dispatch_street', {street = streetName}),
+                        flash = 0,
+                        unique_id = tostring(math.random(0000000, 9999999)),
+                        blip = {
+                            sprite = 480,
+                            scale = 1.0,
+                            colour = 1,
+                            flashes = false,
+                            text = lib.locale('police.dispatch_code'),
+                            time = (Config.Police.BlipDuration * 1000),
+                            sound = 1,
+                        }
+                    })
+                end)
+                dispatchSuccess = ok
+                if not ok and Config.Debug then
+                    print(("[DPS Hookers] cd_dispatch error: %s"):format(tostring(err)))
+                end
+
+            elseif Config.Police.DispatchType == 'qs-dispatch' then
+                local ok, err = pcall(function()
+                    exports['qs-dispatch']:SuspiciousActivity(coords, lib.locale('police.dispatch_message'))
+                end)
+                dispatchSuccess = ok
+                if not ok and Config.Debug then
+                    print(("[DPS Hookers] qs-dispatch error: %s"):format(tostring(err)))
+                end
+
+            elseif Config.Police.DispatchType == 'custom' then
+                local ok, err = pcall(function()
+                    TriggerEvent('police:dispatch', {
+                        code = lib.locale('police.dispatch_code'),
+                        title = lib.locale('police.dispatch_title'),
+                        message = lib.locale('police.dispatch_message'),
+                        coords = coords,
+                        street = streetName,
+                        radius = Config.Police.BlipRadius,
+                        duration = Config.Police.BlipDuration
+                    })
+                end)
+                dispatchSuccess = ok
+                if not ok and Config.Debug then
+                    print(("[DPS Hookers] custom dispatch error: %s"):format(tostring(err)))
+                end
+
+            elseif Config.Police.DispatchType == 'none' then
+                dispatchSuccess = true
+            end
+
+            if Config.Debug then
+                print(("[DPS Hookers] Police dispatched for %s at %s (Risk was %d%%, Dispatch: %s)"):format(
+                    GetPlayerName(src),
+                    streetName,
+                    riskChance,
+                    dispatchSuccess and 'success' or 'failed'
+                ))
+            end
+        end
+
+        -- Notify player immediately that they might have been seen
         TriggerClientEvent('dps-hookers:client:policeNotified', src, {
             chance = riskChance,
-            reasons = reasons
+            reasons = reasons,
+            delayed = dispatchDelay > 0
         })
 
-        -- Debug log
-        if Config.Debug then
-            print(("[DPS Hookers] Police dispatched for %s at %s (Risk was %d%%, Dispatch: %s)"):format(
-                GetPlayerName(src),
-                streetName,
-                riskChance,
-                dispatchSuccess and 'success' or 'failed'
-            ))
+        -- Send dispatch with delay (or immediately if no delay)
+        if dispatchDelay > 0 then
+            SetTimeout(dispatchDelay, sendDispatch)
+        else
+            sendDispatch()
         end
     end
 end)

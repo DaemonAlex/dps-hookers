@@ -14,9 +14,18 @@
     "sex_label": "Sex ($500)",
     "press_signal": "Press %{key} to signal",
     "approaching": "She's approaching your vehicle...",
-    "get_in": "Get in the back seat",
+    "get_in": "Press E to choose a service",
     "activity_blowjob": "Receiving service...",
     "activity_sex": "Having fun..."
+  },
+  "menu": {
+    "title": "Services",
+    "blowjob_title": "Blowjob",
+    "blowjob_desc": "$%{price} - Quick service",
+    "sex_title": "Full Service",
+    "sex_desc": "$%{price} - Complete experience",
+    "dismiss_title": "Send Away",
+    "dismiss_desc": "Dismiss the hooker"
   },
   "notifications": {
     "paid": "You paid $%{cost} for %{type}",
@@ -31,7 +40,7 @@
     "dispatch_title": "Suspicious Activity",
     "dispatch_message": "Witness reports suspicious activity involving a vehicle",
     "dispatch_street": "Location: %{street}",
-    "witness_alert": "Someone may have noticed and called the police!"
+    "witness_alert": "Someone may have seen you..."
   },
   "age_verification": {
     "title": "Age Verification Required",
