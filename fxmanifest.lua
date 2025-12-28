@@ -1,15 +1,15 @@
 --[[ ===================================================== ]]--
---[[       DSRP Hookers - QB-Core/ox_lib Compatible       ]]--
---[[       Original by MaDHouSe - Adapted for DSRP        ]]--
+--[[       DPS Hookers - QB-Core/ox_lib Compatible        ]]--
+--[[       Original by MaDHouSe - Adapted for DPS         ]]--
 --[[ ===================================================== ]]--
 
 fx_version 'cerulean'
 game 'gta5'
 lua54 'yes'
 
-author 'MaDHouSe (Adapted for DSRP by DelPerro Sands RP)'
-description 'DSRP Hookers - Adult RP system with smart police dispatch (18+)'
-version '2.1.0'
+author 'MaDHouSe (Adapted by DPS Development)'
+description 'DPS Hookers - Adult RP system with smart police dispatch (18+)'
+version '2.2.0'
 
 shared_scripts {
     '@ox_lib/init.lua',

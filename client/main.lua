@@ -1,5 +1,5 @@
 --[[ ===================================================== ]]--
---[[       DSRP Hookers - Client Controller               ]]--
+--[[       DPS Hookers - Client Controller                ]]--
 --[[       Handles NPCs, animations, police rolls         ]]--
 --[[ ===================================================== ]]--
 
@@ -10,6 +10,17 @@ local hookerBlip = nil
 local isSignaling = false
 local isBusy = false
 local ageVerified = false
+
+-- Performance: Cache distances for sleep optimization
+local SLEEP_FAR = 2000       -- Far from any interaction point
+local SLEEP_MEDIUM = 500     -- Within medium range
+local SLEEP_NEAR = 100       -- Close to NPC but not interacting
+local SLEEP_ACTIVE = 5       -- Actively interacting
+
+-- Distance thresholds
+local DIST_FAR = 100.0       -- Beyond this = long sleep
+local DIST_MEDIUM = 50.0     -- Within this = medium sleep
+local DIST_NEAR = 15.0       -- Within this = short sleep
 
 --[[ ===================================================== ]]--
 --[[                  UTILITY FUNCTIONS                    ]]--
@@ -107,7 +118,7 @@ end
 local function createHooker()
     if hooker then
         lib.notify({
-            title = 'DSRP Hookers',
+            title = 'DPS Hookers',
             description = lib.locale('notifications.already_busy'),
             type = 'error'
         })
@@ -152,7 +163,7 @@ local function createHooker()
     SetNewWaypoint(coords.x, coords.y)
 
     lib.notify({
-        title = 'DSRP Hookers',
+        title = 'DPS Hookers',
         description = lib.locale('hooker.approaching'),
         type = 'success'
     })
@@ -183,7 +194,7 @@ local function createPimp()
     -- Add ox_target interaction
     exports.ox_target:addLocalEntity(pimp, {
         {
-            name = 'dsrp_hooker_pimp',
+            name = 'dps_hooker_pimp',
             icon = lib.locale('pimp.target_icon'),
             label = lib.locale('pimp.target_label'),
             onSelect = function()
@@ -252,7 +263,7 @@ local function hookerEnterVehicle(vehicle)
     isBusy = false
 
     lib.notify({
-        title = 'DSRP Hookers',
+        title = 'DPS Hookers',
         description = lib.locale('hooker.get_in'),
         type = 'info'
     })
@@ -279,7 +290,7 @@ local function performBlowjob()
     local coords = GetEntityCoords(playerPed)
 
     -- Roll for police BEFORE service starts
-    TriggerServerEvent('dsrp-hookers:server:policeRoll', coords)
+    TriggerServerEvent('dps-hookers:server:policeRoll', coords)
 
     -- Progress bar with animations
     loadAnimDict("oddjobs@towing")
@@ -312,7 +323,7 @@ local function performBlowjob()
         PlayAmbientSpeech1(hooker, "Hooker_Offer_Again", "Speech_Params_Force_Shouted_Clear")
     else
         lib.notify({
-            title = 'DSRP Hookers',
+            title = 'DPS Hookers',
             description = lib.locale('notifications.cancelled'),
             type = 'error'
         })
@@ -330,7 +341,7 @@ local function performSex()
     local coords = GetEntityCoords(playerPed)
 
     -- Roll for police BEFORE service starts
-    TriggerServerEvent('dsrp-hookers:server:policeRoll', coords)
+    TriggerServerEvent('dps-hookers:server:policeRoll', coords)
 
     -- Progress bar with animations
     loadAnimDict("mini@prostitutes@sexlow_veh")
@@ -363,7 +374,7 @@ local function performSex()
         PlayAmbientSpeech1(hooker, "Hooker_Offer_Again", "Speech_Params_Force_Shouted_Clear")
     else
         lib.notify({
-            title = 'DSRP Hookers',
+            title = 'DPS Hookers',
             description = lib.locale('notifications.cancelled'),
             type = 'error'
         })
@@ -377,7 +388,7 @@ end
 --[[ ===================================================== ]]--
 
 --- Handle age restriction
-RegisterNetEvent('dsrp-hookers:client:ageRestricted', function()
+RegisterNetEvent('dps-hookers:client:ageRestricted', function()
     lib.notify({
         title = lib.locale('age_verification.title'),
         description = lib.locale('age_verification.rejected'),
@@ -387,7 +398,7 @@ RegisterNetEvent('dsrp-hookers:client:ageRestricted', function()
 end)
 
 --- Handle successful join
-RegisterNetEvent('dsrp-hookers:client:onJoin', function(data)
+RegisterNetEvent('dps-hookers:client:onJoin', function(data)
     if data.status then
         ageVerified = true
         createPimp()
@@ -395,7 +406,7 @@ RegisterNetEvent('dsrp-hookers:client:onJoin', function(data)
 end)
 
 --- Handle service action from server
-RegisterNetEvent('dsrp-hookers:client:action', function(data)
+RegisterNetEvent('dps-hookers:client:action', function(data)
     if not data.status then return end
 
     if data.type == 'blowjob' then
@@ -406,9 +417,9 @@ RegisterNetEvent('dsrp-hookers:client:action', function(data)
 end)
 
 --- Handle police notification
-RegisterNetEvent('dsrp-hookers:client:policeNotified', function(data)
+RegisterNetEvent('dps-hookers:client:policeNotified', function(data)
     lib.notify({
-        title = 'DSRP Hookers',
+        title = 'DPS Hookers',
         description = lib.locale('police.witness_alert'),
         type = 'warning',
         duration = 5000
@@ -419,14 +430,61 @@ end)
 --[[                   MAIN THREAD LOOP                    ]]--
 --[[ ===================================================== ]]--
 
+--- Calculate optimal sleep time based on distance to relevant points
+---@param playerCoords vector3
+---@return number sleep time in ms
+local function calculateSleepTime(playerCoords)
+    -- If we have an active hooker, prioritize that distance
+    if hooker and DoesEntityExist(hooker) then
+        local hookerCoords = GetEntityCoords(hooker)
+        local dist = #(playerCoords - hookerCoords)
+
+        if dist < 5.0 then return SLEEP_ACTIVE end
+        if dist < DIST_NEAR then return SLEEP_NEAR end
+        if dist < DIST_MEDIUM then return SLEEP_MEDIUM end
+    end
+
+    -- Check distance to pimp location
+    local pimpDist = #(playerCoords - vector3(Config.PimpLocation.x, Config.PimpLocation.y, Config.PimpLocation.z))
+
+    if pimpDist < DIST_NEAR then return SLEEP_NEAR end
+    if pimpDist < DIST_MEDIUM then return SLEEP_MEDIUM end
+    if pimpDist < DIST_FAR then return SLEEP_FAR end
+
+    -- Very far from everything
+    return SLEEP_FAR
+end
+
+--- Check if hooker should be cleaned up (player too far)
+local function checkHookerCleanup()
+    if not hooker or not DoesEntityExist(hooker) then return end
+    if isBusy then return end  -- Don't cleanup during service
+
+    local playerCoords = GetEntityCoords(PlayerPedId())
+    local hookerCoords = GetEntityCoords(hooker)
+    local dist = #(playerCoords - hookerCoords)
+
+    -- If player drove too far away (150+ units) and hooker isn't in vehicle, cleanup
+    if dist > 150.0 and not IsPedInAnyVehicle(hooker, false) then
+        lib.notify({
+            title = 'DPS Hookers',
+            description = 'The hooker got tired of waiting and left.',
+            type = 'info'
+        })
+        deleteHooker()
+    end
+end
+
 CreateThread(function()
     while true do
-        local sleep = 1000
+        local playerPed = PlayerPedId()
+        local playerCoords = GetEntityCoords(playerPed)
+        local sleep = calculateSleepTime(playerCoords)
 
         if ageVerified and hooker and DoesEntityExist(hooker) then
-            sleep = 5
+            -- Check for cleanup (player abandoned hooker)
+            checkHookerCleanup()
 
-            local playerPed = PlayerPedId()
             local vehicle = GetVehiclePedIsIn(playerPed, false)
             local isDriver = vehicle ~= 0 and GetPedInVehicleSeat(vehicle, -1) == playerPed
 
@@ -435,8 +493,11 @@ CreateThread(function()
                 if not IsPedInAnyVehicle(hooker, false) then
                     local vehicleCoords = GetEntityCoords(vehicle)
                     local hookerCoords = GetEntityCoords(hooker)
+                    local dist = #(vehicleCoords - hookerCoords)
 
-                    if #(vehicleCoords - hookerCoords) < 5.0 then
+                    if dist < 5.0 then
+                        sleep = SLEEP_ACTIVE  -- Need fast response for controls
+
                         if not isSignaling and isDriver then
                             draw3DText(hookerCoords + vector3(0, 0, 1.0), lib.locale('hooker.press_signal', {
                                 key = Config.Controls.Signal.label
@@ -451,15 +512,17 @@ CreateThread(function()
 
                 -- Hooker is in vehicle - show service options
                 elseif IsPedInAnyVehicle(hooker, false) and IsVehicleStopped(vehicle) then
+                    sleep = SLEEP_ACTIVE  -- Need fast response for controls
+
                     if isDriver then
                         -- Blowjob (Arrow Up)
                         if IsControlJustReleased(0, Config.Controls.Blowjob.key) then
-                            TriggerServerEvent('dsrp-hookers:server:pay', {type = 'blowjob'})
+                            TriggerServerEvent('dps-hookers:server:pay', {type = 'blowjob'})
                         end
 
                         -- Sex (Arrow Down)
                         if IsControlJustReleased(0, Config.Controls.Sex.key) then
-                            TriggerServerEvent('dsrp-hookers:server:pay', {type = 'havesex'})
+                            TriggerServerEvent('dps-hookers:server:pay', {type = 'havesex'})
                         end
 
                         -- Dismiss (Arrow Left/Right)
@@ -483,7 +546,7 @@ end)
 --- Trigger server on resource start
 AddEventHandler('onResourceStart', function(resource)
     if resource == GetCurrentResourceName() then
-        TriggerServerEvent('dsrp-hookers:server:onJoin')
+        TriggerServerEvent('dps-hookers:server:onJoin')
     end
 end)
 
@@ -497,7 +560,14 @@ end)
 
 --- Trigger server when player loads
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
-    TriggerServerEvent('dsrp-hookers:server:onJoin')
+    TriggerServerEvent('dps-hookers:server:onJoin')
 end)
 
-print("^2[DSRP Hookers]^7 Client initialized successfully")
+--- Clean up when player unloads (logout/disconnect)
+RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
+    deleteHooker()
+    deletePimp()
+    ageVerified = false
+end)
+
+print("^2[DPS Hookers]^7 Client initialized successfully")

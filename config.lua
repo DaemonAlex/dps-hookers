@@ -1,5 +1,5 @@
 --[[ ===================================================== ]]--
---[[                  DSRP Hookers Config                 ]]--
+--[[                  DPS Hookers Config                  ]]--
 --[[              Adult RP System with Police AI          ]]--
 --[[ ===================================================== ]]--
 
@@ -12,8 +12,16 @@ lib.locale()
 --[[                    GENERAL SETTINGS                   ]]--
 --[[ ===================================================== ]]--
 
+-- Debug mode (shows police roll results in console)
+Config.Debug = false
+
 -- Age verification (18+ content)
 Config.AgeVerification = true  -- Require age confirmation on first use
+
+-- Stress system integration
+-- Options: 'qb-hud', 'qbx-hud', 'custom', 'none'
+Config.StressSystem = 'qb-hud'
+Config.CustomStressEvent = nil  -- Set if using 'custom' (e.g., 'myHud:removeStress')
 
 -- NPC Models
 Config.HookerModels = {

@@ -1,10 +1,13 @@
 --[[ ===================================================== ]]--
---[[       DSRP Hookers - Server Controller               ]]--
+--[[       DPS Hookers - Server Controller                ]]--
 --[[       Handles payments, age verification, police     ]]--
 --[[ ===================================================== ]]--
 
 -- Police alert cooldown tracking (per player)
 local policeAlertCooldowns = {}
+
+-- Active service tracking (prevent double-charge exploits)
+local activeServices = {}
 
 --[[ ===================================================== ]]--
 --[[                  UTILITY FUNCTIONS                    ]]--
@@ -26,7 +29,7 @@ end
 ---@param type string Notification type (success, error, info)
 local function notify(src, message, type)
     lib.notify(src, {
-        title = 'DSRP Hookers',
+        title = 'DPS Hookers',
         description = message,
         type = type or 'info'
     })
@@ -39,14 +42,33 @@ local function isPlayerUnderage(src)
     local player = getPlayer(src)
     if not player then return true end
 
-    local birthdate = player.PlayerData.charinfo.birthdate
-    if not birthdate then return true end
+    local charinfo = player.PlayerData.charinfo
+    if not charinfo or not charinfo.birthdate then return true end
 
-    -- Parse birthdate (format: YYYY-MM-DD)
+    local birthdate = charinfo.birthdate
+
+    -- Parse birthdate (format: YYYY-MM-DD or DD/MM/YYYY)
     local birthdateParts = {}
-    for value in string.gmatch(birthdate, "[^-]+") do
-        table.insert(birthdateParts, tonumber(value))
+
+    -- Handle different date formats
+    if string.match(birthdate, "%d+/%d+/%d+") then
+        -- DD/MM/YYYY format
+        for value in string.gmatch(birthdate, "[^/]+") do
+            table.insert(birthdateParts, tonumber(value))
+        end
+        -- Reorder to YYYY, MM, DD
+        local day = birthdateParts[1]
+        local month = birthdateParts[2]
+        local year = birthdateParts[3]
+        birthdateParts = {year, month, day}
+    else
+        -- YYYY-MM-DD format
+        for value in string.gmatch(birthdate, "[^-]+") do
+            table.insert(birthdateParts, tonumber(value))
+        end
     end
+
+    if #birthdateParts < 3 then return true end
 
     -- Parse current date
     local currentDate = {}
@@ -54,18 +76,36 @@ local function isPlayerUnderage(src)
         table.insert(currentDate, tonumber(value))
     end
 
-    -- Calculate age (using -4 offset as per original script)
+    -- Calculate age (QB uses -4 year offset for RP time)
     local age = currentDate[1] - birthdateParts[1] - 4
+
+    -- Adjust for month/day
+    if currentDate[2] < birthdateParts[2] or
+       (currentDate[2] == birthdateParts[2] and currentDate[3] < birthdateParts[3]) then
+        age = age - 1
+    end
 
     return age < 18
 end
 
---- Remove player stress
+--- Remove player stress (configurable target)
 ---@param src number Player source ID
 ---@param amount number Amount of stress to remove
 local function removeStress(src, amount)
-    -- QBox stress system
-    TriggerClientEvent('hud:client:RelieveStress', src, amount)
+    -- Try multiple stress systems
+    if Config.StressSystem == 'qb-hud' then
+        TriggerClientEvent('hud:client:RelieveStress', src, amount)
+    elseif Config.StressSystem == 'qbx-hud' then
+        TriggerClientEvent('hud:client:RelieveStress', src, amount)
+    elseif Config.StressSystem == 'custom' then
+        -- Custom stress event - configure in config.lua
+        if Config.CustomStressEvent then
+            TriggerClientEvent(Config.CustomStressEvent, src, amount)
+        end
+    else
+        -- Default: try common stress event
+        TriggerClientEvent('hud:client:RelieveStress', src, amount)
+    end
 end
 
 --- Check if player is on police alert cooldown
@@ -84,12 +124,33 @@ local function setPoliceCooldown(src)
     policeAlertCooldowns[src] = os.time()
 end
 
+--- Check if player is currently in a service
+---@param src number Player source ID
+---@return boolean
+local function isInService(src)
+    return activeServices[src] ~= nil
+end
+
+--- Set player service state
+---@param src number Player source ID
+---@param serviceType string|nil Service type or nil to clear
+local function setServiceState(src, serviceType)
+    if serviceType then
+        activeServices[src] = {
+            type = serviceType,
+            startTime = os.time()
+        }
+    else
+        activeServices[src] = nil
+    end
+end
+
 --[[ ===================================================== ]]--
 --[[                   SERVER EVENTS                       ]]--
 --[[ ===================================================== ]]--
 
 --- Handle player joining/loading the resource
-RegisterServerEvent('dsrp-hookers:server:onJoin', function()
+RegisterServerEvent('dps-hookers:server:onJoin', function()
     local src = source
     local player = getPlayer(src)
 
@@ -98,59 +159,73 @@ RegisterServerEvent('dsrp-hookers:server:onJoin', function()
     -- Check age verification
     if Config.AgeVerification then
         if isPlayerUnderage(src) then
-            print(("[DSRP Hookers] Player %s (%s) is underage - access denied"):format(
+            print(("[DPS Hookers] Player %s (%s) is underage - access denied"):format(
                 GetPlayerName(src),
                 src
             ))
-            TriggerClientEvent('dsrp-hookers:client:ageRestricted', src)
+            TriggerClientEvent('dps-hookers:client:ageRestricted', src)
             return
         end
     end
 
     -- Send config to client
-    TriggerClientEvent('dsrp-hookers:client:onJoin', src, {
-        status = true,
-        config = Config
+    TriggerClientEvent('dps-hookers:client:onJoin', src, {
+        status = true
     })
 end)
 
 --- Handle payment for services
-RegisterServerEvent('dsrp-hookers:server:pay', function(data)
+RegisterServerEvent('dps-hookers:server:pay', function(data)
     local src = source
     local player = getPlayer(src)
 
     if not player then return end
 
+    -- Security: Prevent double-charge exploits
+    if isInService(src) then
+        notify(src, 'You are already receiving a service.', 'error')
+        return
+    end
+
     local serviceType = data.type
     local cost = 0
     local serviceName = ''
+    local animKey = ''
 
     -- Determine cost and service name
     if serviceType == 'blowjob' then
         cost = Config.Prices.Blowjob
         serviceName = 'blowjob'
+        animKey = 'BlowjobDuration'
     elseif serviceType == 'havesex' then
         cost = Config.Prices.Sex
         serviceName = 'sex'
+        animKey = 'SexDuration'
     else
+        -- Invalid service type - potential exploit attempt
+        print(("[DPS Hookers] Invalid service type from %s: %s"):format(GetPlayerName(src), tostring(serviceType)))
         return
     end
 
-    -- Check if player has enough cash
-    local cash = player.PlayerData.money.cash or 0
+    -- Security: Server-side cash check
+    local playerMoney = player.PlayerData.money
+    local cash = playerMoney and playerMoney.cash or 0
 
     if cash < cost then
         notify(src, lib.locale('notifications.no_cash'), 'error')
         return
     end
 
-    -- Remove money
-    local success = player.Functions.RemoveMoney('cash', cost)
+    -- Remove money (server-side validation)
+    local success = player.Functions.RemoveMoney('cash', cost, 'dps-hookers-service')
 
     if not success then
         notify(src, lib.locale('notifications.no_cash'), 'error')
         return
     end
+
+    -- Set service state to prevent double-charge
+    setServiceState(src, serviceType)
 
     -- Notify player of payment
     notify(src, lib.locale('notifications.paid', {
@@ -159,26 +234,40 @@ RegisterServerEvent('dsrp-hookers:server:pay', function(data)
     }), 'success')
 
     -- Trigger client-side action (animations, etc.)
-    TriggerClientEvent('dsrp-hookers:client:action', src, {
+    TriggerClientEvent('dps-hookers:client:action', src, {
         status = true,
         type = serviceType
     })
 
-    -- Reduce stress after a delay (after service completes)
+    -- Get service duration
+    local duration = Config.Animations[animKey] or 30000
+
+    -- Reduce stress and clear service state after service completes
     local stressAmount = math.random(Config.StressRelief.Min, Config.StressRelief.Max)
 
-    SetTimeout(Config.Animations[serviceType == 'blowjob' and 'BlowjobDuration' or 'SexDuration'], function()
+    SetTimeout(duration, function()
         removeStress(src, stressAmount)
         notify(src, lib.locale('notifications.service_complete'), 'success')
+        setServiceState(src, nil)  -- Clear service state
     end)
 end)
 
 --- Handle police dispatch roll
-RegisterServerEvent('dsrp-hookers:server:policeRoll', function(coords)
+RegisterServerEvent('dps-hookers:server:policeRoll', function(coords)
     local src = source
 
     if not Config.Police.Enabled then return end
     if isOnPoliceCooldown(src) then return end
+
+    -- Validate coords
+    if not coords or type(coords) ~= 'vector3' then
+        -- Try to convert table to vector3
+        if type(coords) == 'table' and coords.x and coords.y and coords.z then
+            coords = vector3(coords.x, coords.y, coords.z)
+        else
+            return
+        end
+    end
 
     -- Calculate police risk chance
     local riskChance, reasons = Config.CalculatePoliceRisk(coords)
@@ -186,80 +275,117 @@ RegisterServerEvent('dsrp-hookers:server:policeRoll', function(coords)
     -- Roll the dice
     local roll = math.random(1, 100)
 
-    -- Debug logging (optional - remove in production)
-    print(("[DSRP Hookers] Police roll for %s: %d/%d (Risk: %d%%)"):format(
-        GetPlayerName(src),
-        roll,
-        100,
-        riskChance
-    ))
+    -- Debug logging
+    if Config.Debug then
+        print(("[DPS Hookers] Police roll for %s: %d/%d (Risk: %d%%)"):format(
+            GetPlayerName(src),
+            roll,
+            100,
+            riskChance
+        ))
+    end
 
     if roll <= riskChance then
         -- Police were called!
         setPoliceCooldown(src)
 
         -- Get street name
-        local streetHash = GetStreetNameAtCoord(coords.x, coords.y, coords.z)
-        local streetName = GetStreetNameFromHashKey(streetHash)
+        local streetHash, _ = GetStreetNameAtCoord(coords.x, coords.y, coords.z)
+        local streetName = GetStreetNameFromHashKey(streetHash) or 'Unknown Location'
 
         -- Trigger police dispatch based on configured system
+        local dispatchSuccess = false
+
         if Config.Police.DispatchType == 'ps-dispatch' then
-            exports['ps-dispatch']:SuspiciousActivity({
-                message = lib.locale('police.dispatch_message'),
-                coords = coords,
-                street = streetName,
-                description = lib.locale('police.dispatch_street', {street = streetName}),
-                radius = Config.Police.BlipRadius,
-                sprite = 480,
-                color = 1,
-                scale = 1.0,
-                length = Config.Police.BlipDuration
-            })
-        elseif Config.Police.DispatchType == 'cd_dispatch' then
-            TriggerEvent('cd_dispatch:AddNotification', {
-                job_table = {'police'},
-                coords = coords,
-                title = lib.locale('police.dispatch_code') .. ' - ' .. lib.locale('police.dispatch_title'),
-                message = lib.locale('police.dispatch_street', {street = streetName}),
-                flash = 0,
-                unique_id = tostring(math.random(0000000, 9999999)),
-                blip = {
+            local ok, err = pcall(function()
+                exports['ps-dispatch']:SuspiciousActivity({
+                    message = lib.locale('police.dispatch_message'),
+                    coords = coords,
+                    street = streetName,
+                    description = lib.locale('police.dispatch_street', {street = streetName}),
+                    radius = Config.Police.BlipRadius,
                     sprite = 480,
+                    color = 1,
                     scale = 1.0,
-                    colour = 1,
-                    flashes = false,
-                    text = lib.locale('police.dispatch_code'),
-                    time = (Config.Police.BlipDuration * 1000),
-                    sound = 1,
-                }
-            })
+                    length = Config.Police.BlipDuration
+                })
+            end)
+            dispatchSuccess = ok
+            if not ok and Config.Debug then
+                print(("[DPS Hookers] ps-dispatch error: %s"):format(tostring(err)))
+            end
+
+        elseif Config.Police.DispatchType == 'cd_dispatch' then
+            local ok, err = pcall(function()
+                TriggerEvent('cd_dispatch:AddNotification', {
+                    job_table = {'police'},
+                    coords = coords,
+                    title = lib.locale('police.dispatch_code') .. ' - ' .. lib.locale('police.dispatch_title'),
+                    message = lib.locale('police.dispatch_street', {street = streetName}),
+                    flash = 0,
+                    unique_id = tostring(math.random(0000000, 9999999)),
+                    blip = {
+                        sprite = 480,
+                        scale = 1.0,
+                        colour = 1,
+                        flashes = false,
+                        text = lib.locale('police.dispatch_code'),
+                        time = (Config.Police.BlipDuration * 1000),
+                        sound = 1,
+                    }
+                })
+            end)
+            dispatchSuccess = ok
+            if not ok and Config.Debug then
+                print(("[DPS Hookers] cd_dispatch error: %s"):format(tostring(err)))
+            end
+
         elseif Config.Police.DispatchType == 'qs-dispatch' then
-            exports['qs-dispatch']:SuspiciousActivity(coords, lib.locale('police.dispatch_message'))
+            local ok, err = pcall(function()
+                exports['qs-dispatch']:SuspiciousActivity(coords, lib.locale('police.dispatch_message'))
+            end)
+            dispatchSuccess = ok
+            if not ok and Config.Debug then
+                print(("[DPS Hookers] qs-dispatch error: %s"):format(tostring(err)))
+            end
+
         elseif Config.Police.DispatchType == 'custom' then
-            -- Trigger custom event
-            TriggerEvent('police:dispatch', {
-                code = lib.locale('police.dispatch_code'),
-                title = lib.locale('police.dispatch_title'),
-                message = lib.locale('police.dispatch_message'),
-                coords = coords,
-                street = streetName,
-                radius = Config.Police.BlipRadius,
-                duration = Config.Police.BlipDuration
-            })
+            local ok, err = pcall(function()
+                TriggerEvent('police:dispatch', {
+                    code = lib.locale('police.dispatch_code'),
+                    title = lib.locale('police.dispatch_title'),
+                    message = lib.locale('police.dispatch_message'),
+                    coords = coords,
+                    street = streetName,
+                    radius = Config.Police.BlipRadius,
+                    duration = Config.Police.BlipDuration
+                })
+            end)
+            dispatchSuccess = ok
+            if not ok and Config.Debug then
+                print(("[DPS Hookers] custom dispatch error: %s"):format(tostring(err)))
+            end
+
+        elseif Config.Police.DispatchType == 'none' then
+            -- No dispatch, just notify player
+            dispatchSuccess = true
         end
 
         -- Notify player
-        TriggerClientEvent('dsrp-hookers:client:policeNotified', src, {
+        TriggerClientEvent('dps-hookers:client:policeNotified', src, {
             chance = riskChance,
             reasons = reasons
         })
 
         -- Debug log
-        print(("[DSRP Hookers] Police dispatched for %s at %s (Risk was %d%%)"):format(
-            GetPlayerName(src),
-            streetName,
-            riskChance
-        ))
+        if Config.Debug then
+            print(("[DPS Hookers] Police dispatched for %s at %s (Risk was %d%%, Dispatch: %s)"):format(
+                GetPlayerName(src),
+                streetName,
+                riskChance,
+                dispatchSuccess and 'success' or 'failed'
+            ))
+        end
     end
 end)
 
@@ -267,12 +393,19 @@ end)
 --[[                  PLAYER CLEANUP                       ]]--
 --[[ ===================================================== ]]--
 
--- Clean up cooldown on player disconnect
+-- Clean up on player disconnect
 AddEventHandler('playerDropped', function()
     local src = source
+
+    -- Clear cooldowns
     if policeAlertCooldowns[src] then
         policeAlertCooldowns[src] = nil
     end
+
+    -- Clear active services
+    if activeServices[src] then
+        activeServices[src] = nil
+    end
 end)
 
-print("^2[DSRP Hookers]^7 Server initialized successfully")
+print("^2[DPS Hookers]^7 Server initialized successfully")
