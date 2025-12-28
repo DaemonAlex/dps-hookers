@@ -305,6 +305,38 @@ GPL-3.0 - Maintained from original MH Hookers by MaDHouSe79.
 
 ---
 
+## Future Features (Roadmap)
+
+Planned features for future releases:
+
+### v2.3.0 - Health & Consequences
+- [ ] **STD System** - Chance to contract diseases from services
+  - Configurable infection chance per service type
+  - Requires treatment at wasabi_ambulance/hospital
+  - Symptoms: health drain, stamina reduction, visual effects
+  - Treatment cost configurable
+- [ ] **Condom Item** - Reduces STD chance (qs-inventory integration)
+
+### v2.4.0 - Expanded Services
+- [ ] **Multiple Hooker Types** - Different price tiers and models
+- [ ] **VIP Services** - Premium options with better stress relief
+- [ ] **Repeat Customer Discounts** - Loyalty system
+
+### v2.5.0 - Immersion
+- [ ] **Police Sting Operations** - Undercover cops posing as hookers
+- [ ] **Pimp Missions** - Side jobs from the pimp NPC
+- [ ] **Territory System** - Different pimps in different areas
+- [ ] **Hooker Preferences** - Some refuse certain services
+
+### Ideas Backlog
+- [ ] Drug-fueled services (higher risk, more stress relief)
+- [ ] Robbery chance (hooker steals your money)
+- [ ] Phone ordering system (qs-smartphone integration)
+- [ ] Reviews system (reputation affects prices)
+- [ ] Multiplayer services (requires 2 players)
+
+---
+
 ## Changelog
 
 ### v2.2.0 (Performance Update)
