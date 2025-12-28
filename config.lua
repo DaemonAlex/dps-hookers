@@ -16,7 +16,9 @@ lib.locale()
 Config.Debug = false
 
 -- Age verification (18+ content)
-Config.AgeVerification = true  -- Require age confirmation on first use
+-- Checks PlayerData.charinfo.birthdate (supports YYYY-MM-DD and DD/MM/YYYY formats)
+-- Set to false if your server handles age gates differently
+Config.AgeVerification = true
 
 -- Stress system integration
 -- Options: 'qb-hud', 'qbx-hud', 'custom', 'none'
@@ -40,6 +42,8 @@ Config.PimpLocation = vector4(117.3872, -1305.0110, 29.2328, 217.0572) -- Strip 
 --[[                   PRICING & SERVICES                  ]]--
 --[[ ===================================================== ]]--
 
+-- Adjust these to match your server's economy
+-- High-inflation servers may want $500/$2000 or higher
 Config.Prices = {
     Blowjob = 100,
     Sex = 500
@@ -122,18 +126,18 @@ Config.Police = {
         },
 
         -- Alleys and secluded spots = fewer witnesses = lower risk
+        -- Rewards players for finding private spots
         Secluded = {
             enabled = true,
-            modifier = -15,  -- -15% in alleys/isolated areas
-            -- Auto-detected based on distance from main roads
-            -- Areas with few nearby peds/vehicles
+            modifier = -20,  -- -20% in alleys/isolated areas (strong reward)
+            -- Auto-detected: <5 nearby peds and <3 nearby vehicles
             requiresCheck = true
         },
 
-        -- Industrial areas = moderate risk
+        -- Industrial areas = lower risk (fewer civilians)
         Industrial = {
             enabled = true,
-            modifier = -5,  -- -5% in industrial zones
+            modifier = -12,  -- -12% in industrial zones
             zones = {
                 -- Docks
                 {coords = vector3(1200.0, -3000.0, 5.0), radius = 300.0},
@@ -199,9 +203,10 @@ Config.Police = {
     Weather = {
         enabled = true,
         -- Rain/fog reduces visibility = lower risk
+        -- Stormy nights become the "meta" for these activities
         badWeather = {
-            modifier = -5,
-            types = {'RAIN', 'THUNDER', 'CLEARING', 'FOGGY'}
+            modifier = -10,  -- -10% in rain/fog (stacks with night bonus)
+            types = {'RAIN', 'THUNDER', 'CLEARING', 'FOGGY', 'SMOG'}
         }
     },
 
