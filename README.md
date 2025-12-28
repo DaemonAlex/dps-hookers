@@ -337,8 +337,24 @@ Planned features for future releases:
 ### v2.5.0 - Immersion
 - [ ] **Police Sting Operations** - Undercover cops posing as hookers
 - [ ] **Pimp Missions** - Side jobs from the pimp NPC
-- [ ] **Territory System** - Different pimps in different areas
 - [ ] **Hooker Preferences** - Some refuse certain services
+
+### v3.0.0 - Player Pimp Business
+- [ ] **Player-Run Pimp Operations** - Run it like a criminal enterprise
+  - Recruit NPC hookers to work for you
+  - Set prices and territories
+  - Collect percentage of earnings
+  - Manage multiple workers across the city
+- [ ] **Territory Wars** - Compete with other player pimps for turf
+- [ ] **Police Heat System** - The bigger your operation, the more attention
+  - Raids on known pimp locations
+  - Undercover investigations
+  - Asset seizure if caught
+- [ ] **Worker Management** - Keep your workers happy or they leave/snitch
+  - Pay protection money
+  - Provide safe locations
+  - Handle customer complaints
+- [ ] **Money Laundering** - Clean your dirty money through businesses
 
 ### Ideas Backlog
 - [ ] **Wandering Hookers** - NPCs that walk the streets at night, can be flagged down
