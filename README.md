@@ -339,22 +339,34 @@ Planned features for future releases:
 - [ ] **Pimp Missions** - Side jobs from the pimp NPC
 - [ ] **Hooker Preferences** - Some refuse certain services
 
-### v3.0.0 - Player Pimp Business
+### v3.0.0 - Gang Integration (rcore_gangs)
+- [ ] **Gang Territory Bonuses** - Operating in your gang's turf
+  - Lower police risk in controlled territory
+  - Gang members provide "lookout" witness reduction
+  - Revenue split with gang treasury
+- [ ] **Territory Prostitution Rights** - Gangs control who works where
+  - `exports['rcore_gangs']:GetZoneAtPosition()` integration
+  - Operating in rival territory = high risk + gang retaliation
+  - Turf wars can include prostitution revenue
+- [ ] **Gang Loyalty from Pimping** - Running hookers builds rep
+  - `rcore_gangs:server:increase_loyalty` on successful services
+  - Higher rank = more workers allowed
+  - Gang bosses can assign pimping rights
+
+### v3.1.0 - Player Pimp Business
 - [ ] **Player-Run Pimp Operations** - Run it like a criminal enterprise
   - Recruit NPC hookers to work for you
-  - Set prices and territories
-  - Collect percentage of earnings
-  - Manage multiple workers across the city
-- [ ] **Territory Wars** - Compete with other player pimps for turf
+  - Set prices and collect percentage of earnings
+  - Manage multiple workers across gang territory
 - [ ] **Police Heat System** - The bigger your operation, the more attention
-  - Raids on known pimp locations
+  - Raids on known pimp locations (wasabi_police integration)
   - Undercover investigations
   - Asset seizure if caught
 - [ ] **Worker Management** - Keep your workers happy or they leave/snitch
-  - Pay protection money
+  - Pay protection money to gang
   - Provide safe locations
   - Handle customer complaints
-- [ ] **Money Laundering** - Clean your dirty money through businesses
+- [ ] **Money Laundering** - Clean dirty money through gang businesses
 
 ### Ideas Backlog
 - [ ] **Wandering Hookers** - NPCs that walk the streets at night, can be flagged down
