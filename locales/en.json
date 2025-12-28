@@ -1,0 +1,43 @@
+{
+  "pimp": {
+    "target_label": "Talk to Pimp",
+    "target_icon": "fas fa-user-tie",
+    "menu_title": "Pimp Services",
+    "menu_description": "Order a companion for your entertainment",
+    "order_option": "Order a Hooker",
+    "order_description": "Call for company (18+)"
+  },
+  "hooker": {
+    "target_label": "Interact",
+    "target_icon": "fas fa-user",
+    "blowjob_label": "Blowjob ($100)",
+    "sex_label": "Sex ($500)",
+    "press_signal": "Press %{key} to signal",
+    "approaching": "She's approaching your vehicle...",
+    "get_in": "Get in the back seat",
+    "activity_blowjob": "Receiving service...",
+    "activity_sex": "Having fun..."
+  },
+  "notifications": {
+    "paid": "You paid $%{cost} for %{type}",
+    "no_cash": "You don't have enough cash",
+    "no_vehicle": "You need to be in a vehicle",
+    "already_busy": "She's already busy with someone else",
+    "service_complete": "Service complete - stress relieved",
+    "cancelled": "Service cancelled"
+  },
+  "police": {
+    "dispatch_code": "10-69",
+    "dispatch_title": "Suspicious Activity",
+    "dispatch_message": "Witness reports suspicious activity involving a vehicle",
+    "dispatch_street": "Location: %{street}",
+    "witness_alert": "Someone may have noticed and called the police!"
+  },
+  "age_verification": {
+    "title": "Age Verification Required",
+    "description": "This content is for adults only (18+)",
+    "confirm": "I am 18 years or older",
+    "cancel": "I am under 18",
+    "rejected": "You must be 18+ to access this content"
+  }
+}
