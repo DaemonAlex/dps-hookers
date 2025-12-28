@@ -562,6 +562,36 @@ RegisterNetEvent('dps-hookers:client:policeNotified', function(data)
     })
 end)
 
+--- Handle qs-dispatch trigger (DPSRP 1.5)
+RegisterNetEvent('dps-hookers:client:triggerDispatch', function(data)
+    -- Get player info from qs-dispatch
+    local playerData = exports['qs-dispatch']:GetPlayerInfo()
+
+    -- Trigger qs-dispatch server event with proper format
+    TriggerServerEvent("qs-dispatch:server:CreateDispatchCall", {
+        job = "police",
+        callLocation = data.coords,
+        callCode = { code = data.code or "10-69", snippet = data.title or "Suspicious Activity" },
+        message = data.message or "Suspicious activity reported in the area.",
+        flashes = false,
+        image = nil,
+        blip = {
+            sprite = 480,
+            scale = 1.2,
+            colour = 1,
+            flashes = false,
+            text = data.title or "Suspicious Activity",
+            time = (data.blipTime or 120) * 1000,
+        },
+        otherData = {
+            {
+                text = data.street or "Unknown Location",
+                icon = "fas fa-map-marker-alt",
+            }
+        }
+    })
+end)
+
 --[[ ===================================================== ]]--
 --[[              LOD ZONE MANAGEMENT                      ]]--
 --[[ ===================================================== ]]--

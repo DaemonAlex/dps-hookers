@@ -20,9 +20,9 @@ Config.Debug = false
 -- Set to false if your server handles age gates differently
 Config.AgeVerification = true
 
--- Stress system integration
--- Options: 'qb-hud', 'qbx-hud', 'custom', 'none'
-Config.StressSystem = 'qb-hud'
+-- Stress system integration for DPSRP 1.5
+-- Options: 'jg-hud' (state bags), 'qb-hud', 'custom', 'none'
+Config.StressSystem = 'jg-hud'
 Config.CustomStressEvent = nil  -- Set if using 'custom' (e.g., 'myHud:removeStress')
 
 -- NPC Models
@@ -50,9 +50,10 @@ Config.Prices = {
 }
 
 -- Stress relief (random amount per service)
+-- Higher values because... you know... full release
 Config.StressRelief = {
-    Min = 2,
-    Max = 4
+    Min = 15,
+    Max = 25
 }
 
 --[[ ===================================================== ]]--

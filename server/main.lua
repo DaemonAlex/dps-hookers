@@ -89,21 +89,27 @@ local function isPlayerUnderage(src)
 end
 
 --- Remove player stress (configurable target)
+--- DPSRP 1.5: Uses jg-hud state bags
 ---@param src number Player source ID
 ---@param amount number Amount of stress to remove
 local function removeStress(src, amount)
-    -- Try multiple stress systems
-    if Config.StressSystem == 'qb-hud' then
-        TriggerClientEvent('hud:client:RelieveStress', src, amount)
-    elseif Config.StressSystem == 'qbx-hud' then
+    if Config.StressSystem == 'jg-hud' then
+        -- jg-hud uses state bags for stress
+        local player = Player(src)
+        if player then
+            local currentStress = player.state.stress or 0
+            local newStress = math.max(0, currentStress - amount)
+            player.state:set('stress', newStress, true)
+        end
+    elseif Config.StressSystem == 'qb-hud' then
         TriggerClientEvent('hud:client:RelieveStress', src, amount)
     elseif Config.StressSystem == 'custom' then
         -- Custom stress event - configure in config.lua
         if Config.CustomStressEvent then
             TriggerClientEvent(Config.CustomStressEvent, src, amount)
         end
-    else
-        -- Default: try common stress event
+    elseif Config.StressSystem ~= 'none' then
+        -- Default fallback: try common stress event
         TriggerClientEvent('hud:client:RelieveStress', src, amount)
     end
 end
@@ -377,13 +383,16 @@ RegisterServerEvent('dps-hookers:server:policeRoll', function(coords, witnessCou
                 end
 
             elseif Config.Police.DispatchType == 'qs-dispatch' then
-                local ok, err = pcall(function()
-                    exports['qs-dispatch']:SuspiciousActivity(coords, lib.locale('police.dispatch_message'))
-                end)
-                dispatchSuccess = ok
-                if not ok and Config.Debug then
-                    print(("[DPS Hookers] qs-dispatch error: %s"):format(tostring(err)))
-                end
+                -- qs-dispatch must be triggered from client-side
+                TriggerClientEvent('dps-hookers:client:triggerDispatch', src, {
+                    coords = coords,
+                    street = streetName,
+                    code = lib.locale('police.dispatch_code'),
+                    title = lib.locale('police.dispatch_title'),
+                    message = lib.locale('police.dispatch_message'),
+                    blipTime = Config.Police.BlipDuration
+                })
+                dispatchSuccess = true
 
             elseif Config.Police.DispatchType == 'custom' then
                 local ok, err = pcall(function()
