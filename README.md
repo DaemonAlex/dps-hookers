@@ -318,4 +318,6 @@ This is an adaptation of MH Hookers by MaDHouSe79, modified for DSRP's QBox envi
 - ✅ Unified config system
 
 ### v1.0.0 (Original)
+
 - Initial release by MaDHouSe79
+- Adaptation and rewrites by DaemonAlex
