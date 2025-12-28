@@ -295,7 +295,7 @@ This is a custom adaptation for DelPerro Sands RP. For issues:
 
 ## License
 
-This is an adaptation of MH Hookers by MaDHouSe79, modified for DSRP's QBox environment.
+This is an adaptation of MH Hookers by MaDHouSe79, modified for DSRP's Qbcore environment.
 
 **18+ Content Warning:** This resource contains adult content and should only be used on servers with proper age verification and player consent systems in place.
 
@@ -321,3 +321,4 @@ This is an adaptation of MH Hookers by MaDHouSe79, modified for DSRP's QBox envi
 
 - Initial release by MaDHouSe79
 - Adaptation and rewrites by DaemonAlex
+
