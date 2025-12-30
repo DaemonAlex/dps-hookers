@@ -1,4 +1,5 @@
 # DPS Hookers
+![d18db8-17](https://github.com/user-attachments/assets/918a899a-b5a1-4794-bf73-44aa30ace36a)
 
 **Adult RP system with intelligent police dispatch (18+ Only)**
 
@@ -429,3 +430,4 @@ Planned features for future releases:
 ### v1.0.0 (Original)
 - Initial release by MaDHouSe79
 - Adaptation and rewrites by DaemonAlex
+
