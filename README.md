@@ -14,8 +14,8 @@ Adapted from MH Hookers by MaDHouSe for DPS Development.
 - **Hooker spawning system** with randomized models
 - **Vehicle-based interactions** with full animation sequences
 - **Two service types**: Blowjob ($100) and Sex ($500)
-- **Stress relief system** integrated with QB-Core HUD
-- **Age verification** (18+ characters only based on birthdate)
+- **Stress relief system** (default: jg-hud state bags; configurable to qb-hud/custom/none)
+- **Age verification** (18+ characters only based on birthdate, re-checked server-side on every paid action)
 
 ### Smart Police Dispatch AI
 - **Witness-based detection** - Requires nearby NPCs to "see" the activity
@@ -35,8 +35,8 @@ Adapted from MH Hookers by MaDHouSe for DPS Development.
 - **Entity state bags** for ownership tracking
 
 ### Modern Tech Stack
-- **Multi-framework support** - QBCore and ESX via Bridge abstraction
-- **Auto-detection** - Automatically detects your framework on startup
+- **Multi-framework support** - Qbox (qbx_core), QBCore and ESX via Bridge abstraction
+- **Auto-detection** - Automatically detects your framework on startup (qbx_core is detected first; it has no `GetCoreObject()` so it needs its own bridge)
 - **ox_lib** context menus, progress circles, and notifications
 - **ox_target** for NPC interactions
 - **Locale system** with JSON translations
@@ -72,7 +72,7 @@ Config.Police = {
 
     -- Witness system
     RequireWitness = true,
-    WitnessRadius = 30.0,
+    WitnessRadius = 40.0,
 
     -- Delayed dispatch (simulates bystander finding scene)
     DelayedDispatch = {
@@ -116,8 +116,8 @@ Config.Prices = {
 }
 
 Config.StressRelief = {
-    Min = 2,
-    Max = 4
+    Min = 15,
+    Max = 25
 }
 
 Config.Animations = {
@@ -228,11 +228,12 @@ Config.AgeVerification = false
 
 ## Dependencies
 
-- **qb-core** OR **es_extended** - Framework (one required)
+- **qbx_core** OR **qb-core** OR **es_extended** - Framework (one required)
 - **ox_lib** - Notifications, progress bars, locale, context menus, zones
 - **ox_target** - NPC interactions
-- **oxmysql** - Database
-- **One of:** ps-dispatch, cd_dispatch, qs-dispatch (optional, for police alerts)
+- **One of:** ps-dispatch, cd_dispatch, qs-dispatch (optional). If none is installed the police system soft-detects the absence and no-ops cleanly.
+
+> **Note:** oxmysql was previously listed but this resource performs no SQL. It was removed as a dependency in v2.3.1.
 
 ---
 
@@ -244,6 +245,7 @@ dps-hookers/
 ├── config.lua              # All configuration settings
 ├── bridge/
 │   ├── init.lua            # Framework auto-detection
+│   ├── qbx.lua             # Qbox (qbx_core) bridge
 │   ├── qb.lua              # QBCore bridge
 │   └── esx.lua             # ESX bridge
 ├── locales/
@@ -310,7 +312,7 @@ For issues:
 
 1. Check your server console for errors
 2. Verify all dependencies are installed and up to date
-3. Ensure your server is running QB-Core framework
+3. Ensure your server is running a supported framework (Qbox / QB-Core / ESX)
 4. Check config.lua settings match your server setup
 
 ---
@@ -325,9 +327,9 @@ GPL-3.0 - Maintained from original MH Hookers by MaDHouSe79.
 
 ## Future Features (Roadmap)
 
-Planned features for future releases:
+Planned features for future releases. **None of the items below are implemented yet** - they are aspirational and their version labels are tentative.
 
-### v2.3.0 - Health & Consequences
+### Planned - Health & Consequences
 - [ ] **STD System** - Chance to contract diseases from services
   - Configurable infection chance per service type
   - Requires treatment at wasabi_ambulance/hospital
@@ -406,6 +408,17 @@ Planned features for future releases:
 ---
 
 ## Changelog
+
+### v2.3.1 (Qbox + Security Fix Pass)
+- **Added Qbox (qbx_core) bridge** (`bridge/qbx.lua`) using discrete exports - qbx_core has no `GetCoreObject()`, which made the qb bridge throw and killed the resource on a pure Qbox box. init.lua now detects `qbx_core` first; bridge load is pcall-wrapped so a bridge fault fails loudly instead of nil-cascading.
+- **Risk engine moved client-side** - police risk (peds/clock/weather/street name) is now computed on the client where those natives actually work, then validated + rolled server-side. Previously these client-only natives ran on the server and silently returned 0/blank.
+- **Server-authoritative police roll** - coords are cross-checked against the player's real server position; witness count and risk are clamped; the roll itself runs on the server.
+- **Age gate re-checked server-side** in `server:pay` and `server:policeRoll` (previously only at join).
+- **Dispatch soft-detection** - if the configured dispatch resource isn't running, the system falls back to a clean no-op instead of hard-erroring (qs-dispatch path is now pcall-guarded and resource-checked).
+- **Hooker is now a LOCAL ped** so a mid-service client crash can't orphan a networked ped on the server.
+- **`server:pay` now requires an active-hooker state** (set only after the signal -> enter-vehicle flow) to block direct-trigger farming.
+- Removed dead `oxmysql` dependency (no SQL is performed).
+- Reconciled README numbers (StressRelief 15/25, WitnessRadius 40.0) and framework wording (Qbox/QBCore/ESX).
 
 ### v2.2.0 (Performance Update)
 - LOD-based threading with ox_lib zones

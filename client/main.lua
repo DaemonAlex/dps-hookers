@@ -140,12 +140,16 @@ end
 local function deleteHooker()
     if not hooker then return end
 
+    -- Clear the server-side "active hooker" precondition (covers dismiss,
+    -- distance cleanup, resource stop and player unload paths).
+    TriggerServerEvent('dps-hookers:server:setHookerState', false)
+
     local hookerEntity = hooker
     local randomDelay = math.random(3000, 6000)
 
-    -- Clear state bag
+    -- Clear state bag (non-replicated: local entity)
     if DoesEntityExist(hookerEntity) then
-        Entity(hookerEntity).state:set('owner', nil, true)
+        Entity(hookerEntity).state:set('owner', nil, false)
     end
 
     SetTimeout(randomDelay, function()
@@ -189,8 +193,13 @@ local function createHooker()
     end
 
     -- Create ped
+    -- LOCAL ped (isNetworked = false): a networked hooker orphaned on the
+    -- server if the owning client crashed mid-service, since cleanup is
+    -- client-only. This interaction is single-player-visible, so a local ped
+    -- is correct and self-cleans when the client's world unloads. (Matches the
+    -- pimp, which is already local at createPimp.)
     local coords = Config.HookerSpawn
-    hooker = CreatePed(0, model, coords.x, coords.y, coords.z - 1.0, coords.w, true, true)
+    hooker = CreatePed(0, model, coords.x, coords.y, coords.z - 1.0, coords.w, false, true)
 
     if not DoesEntityExist(hooker) then return end
 
@@ -200,9 +209,10 @@ local function createHooker()
     FreezeEntityPosition(hooker, true)
     TaskStartScenarioInPlace(hooker, "WORLD_HUMAN_SMOKING", 0, false)
 
-    -- Set state bag for ownership tracking
-    Entity(hooker).state:set('owner', GetPlayerServerId(PlayerId()), true)
-    Entity(hooker).state:set('type', 'dps_hooker', true)
+    -- Local entity state bags (non-replicated: the ped no longer exists on the
+    -- network, so replicating would be a no-op / warning).
+    Entity(hooker).state:set('owner', GetPlayerServerId(PlayerId()), false)
+    Entity(hooker).state:set('type', 'dps_hooker', false)
 
     -- Create blip
     hookerBlip = AddBlipForCoord(coords.x, coords.y, coords.z)
@@ -320,6 +330,13 @@ local function hookerEnterVehicle(vehicle)
     FreezeEntityPosition(vehicle, false)
     isBusy = false
 
+    -- Tell the server a hooker is now active for this player. server:pay
+    -- refuses to charge unless this precondition is set, blocking direct-event
+    -- farming of payments/stress relief without going through the flow.
+    if IsPedInAnyVehicle(hooker, false) then
+        TriggerServerEvent('dps-hookers:server:setHookerState', true)
+    end
+
     lib.notify({
         title = 'DPS Hookers',
         description = lib.locale('hooker.get_in'),
@@ -407,6 +424,34 @@ local function countWitnesses()
     return witnessCount
 end
 
+--- Compute police risk CLIENT-SIDE and hand a validated payload to the server.
+--- The risk engine reads peds (GetGamePool), the in-game clock (GetClockHours)
+--- and weather (GetPrevWeatherTypeHashName) plus the street name - ALL of which
+--- are client-only natives that return 0/blank on the server. So the roll inputs
+--- must be gathered here; the server clamps them, cross-checks coords, and rolls.
+---@param coords vector3 Player coordinates
+local function rollPolice(coords)
+    if not Config.Police.Enabled then return end
+
+    local witnesses = countWitnesses()
+    local riskChance, reasons = Config.CalculatePoliceRisk(coords)
+
+    -- Resolve street name client-side (GetStreetNameAtCoord is client-only)
+    local streetHash = GetStreetNameAtCoord(coords.x, coords.y, coords.z)
+    local streetName = GetStreetNameFromHashKey(streetHash)
+    if not streetName or streetName == '' then
+        streetName = 'Unknown Location'
+    end
+
+    TriggerServerEvent('dps-hookers:server:policeRoll', {
+        coords = { x = coords.x, y = coords.y, z = coords.z },
+        witnessCount = witnesses,
+        riskChance = riskChance,
+        location = reasons and reasons.location or nil,
+        streetName = streetName
+    })
+end
+
 --- Perform blowjob service
 local function performBlowjob()
     if not hooker or isBusy then return end
@@ -415,9 +460,8 @@ local function performBlowjob()
     updateCache()
     local coords = cachedCoords
 
-    -- Count witnesses and roll for police BEFORE service starts
-    local witnesses = countWitnesses()
-    TriggerServerEvent('dps-hookers:server:policeRoll', coords, witnesses)
+    -- Roll for police BEFORE service starts (risk computed client-side)
+    rollPolice(coords)
 
     -- Progress bar with animations
     loadAnimDict("oddjobs@towing")
@@ -471,9 +515,8 @@ local function performSex()
     updateCache()
     local coords = cachedCoords
 
-    -- Count witnesses and roll for police BEFORE service starts
-    local witnesses = countWitnesses()
-    TriggerServerEvent('dps-hookers:server:policeRoll', coords, witnesses)
+    -- Roll for police BEFORE service starts (risk computed client-side)
+    rollPolice(coords)
 
     -- Progress bar with animations
     loadAnimDict("mini@prostitutes@sexlow_veh")
@@ -563,33 +606,49 @@ RegisterNetEvent('dps-hookers:client:policeNotified', function(data)
 end)
 
 --- Handle qs-dispatch trigger (DPSRP 1.5)
+--- Soft-guarded: qs-dispatch is NOT installed on every box. Without this check
+--- exports['qs-dispatch']:GetPlayerInfo() hard-errors when the resource is
+--- absent. Detect it first and no-op cleanly if missing.
 RegisterNetEvent('dps-hookers:client:triggerDispatch', function(data)
-    -- Get player info from qs-dispatch
-    local playerData = exports['qs-dispatch']:GetPlayerInfo()
+    if GetResourceState('qs-dispatch') ~= 'started' then
+        if Config.Debug then
+            print('[DPS Hookers] qs-dispatch not started - dispatch skipped (no-op)')
+        end
+        return
+    end
 
-    -- Trigger qs-dispatch server event with proper format
-    TriggerServerEvent("qs-dispatch:server:CreateDispatchCall", {
-        job = "police",
-        callLocation = data.coords,
-        callCode = { code = data.code or "10-69", snippet = data.title or "Suspicious Activity" },
-        message = data.message or "Suspicious activity reported in the area.",
-        flashes = false,
-        image = nil,
-        blip = {
-            sprite = 480,
-            scale = 1.2,
-            colour = 1,
+    local ok, err = pcall(function()
+        -- Get player info from qs-dispatch (some builds require this priming call)
+        local _ = exports['qs-dispatch']:GetPlayerInfo()
+
+        -- Trigger qs-dispatch server event with proper format
+        TriggerServerEvent("qs-dispatch:server:CreateDispatchCall", {
+            job = "police",
+            callLocation = data.coords,
+            callCode = { code = data.code or "10-69", snippet = data.title or "Suspicious Activity" },
+            message = data.message or "Suspicious activity reported in the area.",
             flashes = false,
-            text = data.title or "Suspicious Activity",
-            time = (data.blipTime or 120) * 1000,
-        },
-        otherData = {
-            {
-                text = data.street or "Unknown Location",
-                icon = "fas fa-map-marker-alt",
+            image = nil,
+            blip = {
+                sprite = 480,
+                scale = 1.2,
+                colour = 1,
+                flashes = false,
+                text = data.title or "Suspicious Activity",
+                time = (data.blipTime or 120) * 1000,
+            },
+            otherData = {
+                {
+                    text = data.street or "Unknown Location",
+                    icon = "fas fa-map-marker-alt",
+                }
             }
-        }
-    })
+        })
+    end)
+
+    if not ok and Config.Debug then
+        print(('[DPS Hookers] qs-dispatch trigger error: %s'):format(tostring(err)))
+    end
 end)
 
 --[[ ===================================================== ]]--

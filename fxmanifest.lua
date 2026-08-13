@@ -9,7 +9,7 @@ lua54 'yes'
 
 author 'MaDHouSe (Adapted by DPS Development)'
 description 'DPS Hookers - Adult RP system with smart police dispatch (18+)'
-version '2.3.0'
+version '2.3.1'
 
 shared_scripts {
     '@ox_lib/init.lua',
@@ -22,12 +22,13 @@ client_scripts {
 }
 
 server_scripts {
-    '@oxmysql/lib/MySQL.lua',
+    -- NOTE: oxmysql was removed in 2.3.1 - this resource performs no SQL.
     'server/main.lua'
 }
 
 files {
     'locales/*.json',
+    'bridge/qbx.lua',
     'bridge/qb.lua',
     'bridge/esx.lua'
 }
