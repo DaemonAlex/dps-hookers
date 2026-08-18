@@ -244,7 +244,7 @@ RegisterServerEvent('dps-hookers:server:pay', function(data)
     local cash = Bridge.GetMoney(src, 'cash')
 
     if cash < cost then
-        notify(src, lib.locale('notifications.no_cash'), 'error')
+        notify(src, locale('notifications.no_cash'), 'error')
         return
     end
 
@@ -252,7 +252,7 @@ RegisterServerEvent('dps-hookers:server:pay', function(data)
     local success = Bridge.RemoveMoney(src, 'cash', cost, 'dps-hookers-service')
 
     if not success then
-        notify(src, lib.locale('notifications.no_cash'), 'error')
+        notify(src, locale('notifications.no_cash'), 'error')
         return
     end
 
@@ -260,7 +260,7 @@ RegisterServerEvent('dps-hookers:server:pay', function(data)
     setServiceState(src, serviceType)
 
     -- Notify player of payment
-    notify(src, lib.locale('notifications.paid', {
+    notify(src, locale('notifications.paid', {
         cost = cost,
         type = serviceName
     }), 'success')
@@ -279,7 +279,7 @@ RegisterServerEvent('dps-hookers:server:pay', function(data)
 
     SetTimeout(duration, function()
         removeStress(src, stressAmount)
-        notify(src, lib.locale('notifications.service_complete'), 'success')
+        notify(src, locale('notifications.service_complete'), 'success')
         setServiceState(src, nil)  -- Clear service state
     end)
 end)
@@ -408,10 +408,10 @@ RegisterServerEvent('dps-hookers:server:policeRoll', function(data)
             if Config.Police.DispatchType == 'ps-dispatch' then
                 local ok, err = pcall(function()
                     exports['ps-dispatch']:SuspiciousActivity({
-                        message = lib.locale('police.dispatch_message'),
+                        message = locale('police.dispatch_message'),
                         coords = coords,
                         street = streetName,
-                        description = lib.locale('police.dispatch_street', {street = streetName}),
+                        description = locale('police.dispatch_street', {street = streetName}),
                         radius = Config.Police.BlipRadius,
                         sprite = 480,
                         color = 1,
@@ -429,8 +429,8 @@ RegisterServerEvent('dps-hookers:server:policeRoll', function(data)
                     TriggerEvent('cd_dispatch:AddNotification', {
                         job_table = {'police'},
                         coords = coords,
-                        title = lib.locale('police.dispatch_code') .. ' - ' .. lib.locale('police.dispatch_title'),
-                        message = lib.locale('police.dispatch_street', {street = streetName}),
+                        title = locale('police.dispatch_code') .. ' - ' .. locale('police.dispatch_title'),
+                        message = locale('police.dispatch_street', {street = streetName}),
                         flash = 0,
                         unique_id = tostring(math.random(0000000, 9999999)),
                         blip = {
@@ -438,7 +438,7 @@ RegisterServerEvent('dps-hookers:server:policeRoll', function(data)
                             scale = 1.0,
                             colour = 1,
                             flashes = false,
-                            text = lib.locale('police.dispatch_code'),
+                            text = locale('police.dispatch_code'),
                             time = (Config.Police.BlipDuration * 1000),
                             sound = 1,
                         }
@@ -454,19 +454,38 @@ RegisterServerEvent('dps-hookers:server:policeRoll', function(data)
                 TriggerClientEvent('dps-hookers:client:triggerDispatch', src, {
                     coords = coords,
                     street = streetName,
-                    code = lib.locale('police.dispatch_code'),
-                    title = lib.locale('police.dispatch_title'),
-                    message = lib.locale('police.dispatch_message'),
+                    code = locale('police.dispatch_code'),
+                    title = locale('police.dispatch_title'),
+                    message = locale('police.dispatch_message'),
                     blipTime = Config.Police.BlipDuration
                 })
                 dispatchSuccess = true
 
+            elseif Config.Police.DispatchType == 'wasabi_mdt' then
+                -- native server export of the MDT & Dispatch System (V2) we already run
+                local ok, err = pcall(function()
+                    exports['wasabi_mdt']:CreateDispatch({
+                        type        = 'disturbance',
+                        title       = locale('police.dispatch_title'),
+                        description = locale('police.dispatch_message'),
+                        location    = streetName,
+                        coords      = coords,
+                        priority    = 2,
+                        code        = locale('police.dispatch_code'),
+                        senderName  = 'Anonymous Caller',
+                    })
+                end)
+                dispatchSuccess = ok
+                if not ok and Config.Debug then
+                    print(("[DPS Hookers] wasabi_mdt dispatch error: %s"):format(tostring(err)))
+                end
+
             elseif Config.Police.DispatchType == 'custom' then
                 local ok, err = pcall(function()
                     TriggerEvent('police:dispatch', {
-                        code = lib.locale('police.dispatch_code'),
-                        title = lib.locale('police.dispatch_title'),
-                        message = lib.locale('police.dispatch_message'),
+                        code = locale('police.dispatch_code'),
+                        title = locale('police.dispatch_title'),
+                        message = locale('police.dispatch_message'),
                         coords = coords,
                         street = streetName,
                         radius = Config.Police.BlipRadius,
@@ -548,7 +567,8 @@ CreateThread(function()
     local dispatchResources = {
         ['ps-dispatch'] = 'ps-dispatch',
         ['cd_dispatch'] = 'cd_dispatch',
-        ['qs-dispatch'] = 'qs-dispatch'
+        ['qs-dispatch'] = 'qs-dispatch',
+        ['wasabi_mdt']  = 'wasabi_mdt'
     }
 
     local dt = Config.Police.DispatchType
