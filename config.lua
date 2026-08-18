@@ -95,8 +95,8 @@ Config.Police = {
     Enabled = true,
 
     -- Dispatch system to use
-    -- Options: 'ps-dispatch', 'cd_dispatch', 'qs-dispatch', 'custom', 'none'
-    DispatchType = 'qs-dispatch',
+    -- Options: 'wasabi_mdt', 'ps-dispatch', 'cd_dispatch', 'qs-dispatch', 'custom', 'none'
+    DispatchType = 'wasabi_mdt',
 
     -- Witness system: Require nearby NPC to "see" the act before dispatch
     RequireWitness = true,

@@ -173,7 +173,7 @@ local function createHooker()
     if hooker then
         lib.notify({
             title = 'DPS Hookers',
-            description = lib.locale('notifications.already_busy'),
+            description = locale('notifications.already_busy'),
             type = 'error'
         })
         return
@@ -228,7 +228,7 @@ local function createHooker()
 
     lib.notify({
         title = 'DPS Hookers',
-        description = lib.locale('hooker.approaching'),
+        description = locale('hooker.approaching'),
         type = 'success'
     })
 
@@ -262,8 +262,8 @@ local function createPimp()
     exports.ox_target:addLocalEntity(pimp, {
         {
             name = 'dps_hooker_pimp',
-            icon = lib.locale('pimp.target_icon'),
-            label = lib.locale('pimp.target_label'),
+            icon = locale('pimp.target_icon'),
+            label = locale('pimp.target_label'),
             onSelect = function()
                 createHooker()
             end,
@@ -339,7 +339,7 @@ local function hookerEnterVehicle(vehicle)
 
     lib.notify({
         title = 'DPS Hookers',
-        description = lib.locale('hooker.get_in'),
+        description = locale('hooker.get_in'),
         type = 'info'
     })
 end
@@ -362,24 +362,24 @@ local function openServiceMenu()
 
     local options = {
         {
-            title = lib.locale('menu.blowjob_title'),
-            description = lib.locale('menu.blowjob_desc', {price = Config.Prices.Blowjob}),
+            title = locale('menu.blowjob_title'),
+            description = locale('menu.blowjob_desc', {price = Config.Prices.Blowjob}),
             icon = 'hand-holding-dollar',
             onSelect = function()
                 TriggerServerEvent('dps-hookers:server:pay', {type = 'blowjob'})
             end
         },
         {
-            title = lib.locale('menu.sex_title'),
-            description = lib.locale('menu.sex_desc', {price = Config.Prices.Sex}),
+            title = locale('menu.sex_title'),
+            description = locale('menu.sex_desc', {price = Config.Prices.Sex}),
             icon = 'heart',
             onSelect = function()
                 TriggerServerEvent('dps-hookers:server:pay', {type = 'havesex'})
             end
         },
         {
-            title = lib.locale('menu.dismiss_title'),
-            description = lib.locale('menu.dismiss_desc'),
+            title = locale('menu.dismiss_title'),
+            description = locale('menu.dismiss_desc'),
             icon = 'door-open',
             onSelect = function()
                 hookerLeaveVehicle(cachedVehicle)
@@ -389,7 +389,7 @@ local function openServiceMenu()
 
     lib.registerContext({
         id = 'dps_hooker_services',
-        title = lib.locale('menu.title'),
+        title = locale('menu.title'),
         options = options
     })
 
@@ -473,7 +473,7 @@ local function performBlowjob()
     local success = lib.progressCircle({
         duration = Config.Animations.BlowjobDuration,
         position = 'bottom',
-        label = lib.locale('hooker.activity_blowjob'),
+        label = locale('hooker.activity_blowjob'),
         useWhileDead = false,
         canCancel = true,
         disable = {
@@ -499,7 +499,7 @@ local function performBlowjob()
     else
         lib.notify({
             title = 'DPS Hookers',
-            description = lib.locale('notifications.cancelled'),
+            description = locale('notifications.cancelled'),
             type = 'error'
         })
     end
@@ -528,7 +528,7 @@ local function performSex()
     local success = lib.progressCircle({
         duration = Config.Animations.SexDuration,
         position = 'bottom',
-        label = lib.locale('hooker.activity_sex'),
+        label = locale('hooker.activity_sex'),
         useWhileDead = false,
         canCancel = true,
         disable = {
@@ -554,7 +554,7 @@ local function performSex()
     else
         lib.notify({
             title = 'DPS Hookers',
-            description = lib.locale('notifications.cancelled'),
+            description = locale('notifications.cancelled'),
             type = 'error'
         })
     end
@@ -569,8 +569,8 @@ end
 --- Handle age restriction
 RegisterNetEvent('dps-hookers:client:ageRestricted', function()
     lib.notify({
-        title = lib.locale('age_verification.title'),
-        description = lib.locale('age_verification.rejected'),
+        title = locale('age_verification.title'),
+        description = locale('age_verification.rejected'),
         type = 'error',
         duration = 10000
     })
@@ -599,7 +599,7 @@ end)
 RegisterNetEvent('dps-hookers:client:policeNotified', function(data)
     lib.notify({
         title = 'DPS Hookers',
-        description = lib.locale('police.witness_alert'),
+        description = locale('police.witness_alert'),
         type = 'warning',
         duration = 5000
     })
@@ -737,7 +737,7 @@ CreateThread(function()
                         sleep = 0  -- Need immediate response
 
                         if not isSignaling and isDriver then
-                            draw3DText(hookerCoords + vector3(0, 0, 1.0), lib.locale('hooker.press_signal', {
+                            draw3DText(hookerCoords + vector3(0, 0, 1.0), locale('hooker.press_signal', {
                                 key = Config.Controls.Signal.label
                             }))
                         end
