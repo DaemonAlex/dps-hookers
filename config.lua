@@ -398,4 +398,63 @@ function Config.CalculatePoliceRisk(playerCoords)
     return totalRisk, reasons
 end
 
+
+--[[ ===================================================== ]]--
+--[[   STREET CORNERS (DPS 2026-10-29, Damon's brief)      ]]--
+--[[   Girls on the pavement outside the night spots.      ]]--
+--[[   Never in the street: see client/corners.lua.        ]]--
+--[[ ===================================================== ]]--
+
+-- Game hours the corners are worked. Corners with allDay = true ignore this.
+Config.Night = { start = 21, stop = 5 }
+
+-- The street rule: a spot is snapped to the nearest pavement point and refused
+-- when a road node is closer than roadNodeMin or a vehicle sits within vehicleMin.
+Config.StreetRule = { roadNodeMin = 3.0, vehicleMin = 5.0 }
+
+Config.Corner = {
+    spawnRange   = 120.0,  -- a corner comes to life when the player is this close
+    despawnRange = 170.0,  -- and goes quiet again beyond this
+    callRange    = 12.0,   -- she calls out to players on foot within this
+    callCooldown = 60000,  -- ms between call-outs for this player
+    attachRange  = 10.0,   -- a car stopped this close gets the E prompt (existing flow)
+    detachRange  = 40.0,   -- drive off this far without picking her up and she lets go
+    blip         = { sprite = 121, colour = 48, scale = 0.8, label = 'Vanilla Unicorn' }, -- one blip, at the pimp
+}
+
+-- What she says to a passer-by (one at random, spoken line + floating text).
+Config.CallOuts = {
+    "Hey handsome, you lost? I can help you find something.",
+    "Long night? Mine's just getting started. Come here.",
+    "Don't be shy, sugar, I don't bite. Much.",
+    "Looking for company or just looking?",
+    "Slow down, baby. Where's the fire?",
+    "You look like you could use some attention.",
+}
+
+-- style 'low' = WORLD_HUMAN_PROSTITUTE_LOW_CLASS, 'high' = WORLD_HUMAN_PROSTITUTE_HIGH_CLASS.
+-- count = girls at that corner. Coordinates are the venue; the pavement snap does the rest.
+-- Marked (approximate): Damon's /spot replaces them when he has walked them.
+Config.Corners = {
+    { label = 'Vanilla Unicorn, Vespucci Blvd', coords = vector3(127.92, -1284.64, 29.28), style = 'low',  count = 2, allDay = true },
+    { label = 'Bahama Mamas West',              coords = vector3(-1386.05, -593.02, 30.32), style = 'high', count = 1 },
+    { label = 'Tequi-la-la, Vinewood',          coords = vector3(-561.0, 286.0, 82.2),      style = 'low',  count = 1 },
+    { label = 'Koi, Vespucci Canals',           coords = vector3(-1034.73, -1484.28, 4.58), style = 'low',  count = 1 },
+    { label = 'Pizza This, Mirror Park',        coords = vector3(812.0, -752.99, 26.78),    style = 'low',  count = 1 },
+    { label = 'Cat Cafe, Little Seoul',         coords = vector3(-581.06, -1066.22, 22.34), style = 'low',  count = 1 },
+    { label = 'Diamond Casino drop-off',        coords = vector3(927.68, 49.65, 81.54),     style = 'high', count = 1 },
+    { label = 'Four Dragons casino',            coords = vector3(380.05, 261.9, 93.06),     style = 'high', count = 1 },
+    { label = 'Del Perro pier entrance',        coords = vector3(-1650.0, -1080.0, 13.0),   style = 'low',  count = 2 },
+    { label = 'Vespucci Beach boardwalk (approximate)', coords = vector3(-1240.0, -1510.0, 4.3), style = 'low', count = 1 },
+    { label = 'Vespucci Blvd at Magellan (approximate)', coords = vector3(-1150.0, -1420.0, 4.5), style = 'low', count = 1 },
+    { label = 'Sandy Motel',                    coords = vector3(1628.05, 3787.72, 35.57),  style = 'low',  count = 1 },
+    { label = 'Sandy Apartments',               coords = vector3(1538.91, 3537.04, 36.91),  style = 'low',  count = 1 },
+    { label = 'Sandy illegal garage and gas',   coords = vector3(2015.01, 3775.77, 32.72),  style = 'low',  count = 1 },
+    { label = 'Yellow Jack Inn',                coords = vector3(1985.0, 3053.0, 47.2),     style = 'low',  count = 1 },
+    { label = 'Sandy outskirts trailers',       coords = vector3(2700.0, 3400.0, 55.0),     style = 'low',  count = 1 },
+    { label = 'Stab City trailer park (approximate)', coords = vector3(60.0, 3700.0, 40.0), style = 'low', count = 2 },
+    { label = 'Paleto main drag (approximate)', coords = vector3(-146.0, 6150.0, 31.0),     style = 'low',  count = 1 },
+    { label = 'Hookies, Great Ocean Hwy (approximate)', coords = vector3(-2192.0, 4291.0, 49.0), style = 'low', count = 1 },
+}
+
 return Config
