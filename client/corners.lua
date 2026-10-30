@@ -26,14 +26,15 @@ local function pavementSpot(x, y, z)
     local ok, px, py, pz = GetSafeCoordForPed(x, y, z, true, 16)
     if not ok then ok, px, py, pz = GetSafeCoordForPed(x, y, z, false, 16) end
     if not ok then return nil end
-    local found, nx, ny, nz = GetClosestVehicleNode(px, py, pz, 1, 3.0, 0)
-    if found then
-        local away = vector3(px - nx, py - ny, 0.0)
+    -- (bool, vector3, heading) on this build; pcall-guarded against a pathfind fault.
+    local got, found, node = pcall(GetClosestVehicleNodeWithHeading, px, py, pz, 1, 3.0, 0)
+    if got and found and node then
+        local away = vector3(px - node.x, py - node.y, 0.0)
         local d = #away
         if d < roadMin then
             if d < 0.1 then return nil end
             away = away / d
-            px, py = nx + away.x * (roadMin + 0.5), ny + away.y * (roadMin + 0.5)
+            px, py = node.x + away.x * (roadMin + 0.5), node.y + away.y * (roadMin + 0.5)
             local g, gz = GetGroundZFor_3dCoord(px, py, pz + 2.0, false)
             if g then pz = gz end
         end
@@ -69,8 +70,8 @@ local function spawnCorner(idx)
             if model then
                 -- heading: face the road (towards the nearest vehicle node)
                 local heading = 0.0
-                local found, nx, ny = GetClosestVehicleNode(spot.x, spot.y, spot.z, 1, 3.0, 0)
-                if found then heading = GetHeadingFromVector_2d(nx - spot.x, ny - spot.y) end
+                local gotN, foundN, node = pcall(GetClosestVehicleNodeWithHeading, spot.x, spot.y, spot.z, 1, 3.0, 0)
+                if gotN and foundN and node then heading = GetHeadingFromVector_2d(node.x - spot.x, node.y - spot.y) end
                 local ped = CreatePed(0, model, spot.x, spot.y, spot.z, heading, false, true)
                 if DoesEntityExist(ped) then
                     SetBlockingOfNonTemporaryEvents(ped, true)
