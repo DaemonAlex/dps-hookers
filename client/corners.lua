@@ -23,9 +23,11 @@ end
 local function pavementSpot(x, y, z)
     local rule = Config.StreetRule or {}
     local roadMin, vehMin = rule.roadNodeMin or 3.0, rule.vehicleMin or 5.0
-    local ok, px, py, pz = GetSafeCoordForPed(x, y, z, true, 16)
-    if not ok then ok, px, py, pz = GetSafeCoordForPed(x, y, z, false, 16) end
-    if not ok then return nil end
+    -- GetSafeCoordForPed returns (bool, vector3) on this build, not four numbers
+    local ok, safe = GetSafeCoordForPed(x, y, z, true, 16)
+    if not ok then ok, safe = GetSafeCoordForPed(x, y, z, false, 16) end
+    if not ok or not safe then return nil end
+    local px, py, pz = safe.x, safe.y, safe.z
     -- (bool, vector3, heading) on this build; pcall-guarded against a pathfind fault.
     local got, found, node = pcall(GetClosestVehicleNodeWithHeading, px, py, pz, 1, 3.0, 0)
     if got and found and node then
