@@ -825,3 +825,17 @@ Bridge.OnPlayerUnload(function()
 end)
 
 print("^2[DPS Hookers]^7 Client initialized (optimized)")
+
+-- DPS 2026-10-29 corners: client/corners.lua hands a street girl to this file's car flow
+-- (E to signal, menu, pay) without owning her. Attach only when no girl is active.
+function HookerAttach(ped)
+    if hooker then return false end
+    hooker = ped
+    isNearHooker = false
+    return true
+end
+function HookerDetach(ped)
+    if hooker == ped then hooker = nil end
+end
+function HookerActive() return hooker end
+function HookerAgeOk() return ageVerified end

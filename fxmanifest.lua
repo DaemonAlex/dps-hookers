@@ -18,7 +18,8 @@ shared_scripts {
 }
 
 client_scripts {
-    'client/main.lua'
+    'client/main.lua',
+    'client/corners.lua' -- DPS 2026-10-29 street corners
 }
 
 server_scripts {
