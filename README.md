@@ -7,6 +7,12 @@ Adapted from MH Hookers by MaDHouSe for DPS Development.
 
 ---
 
+## What it is for
+
+Adult servers want a red-light scene that has some risk in it. This script gives players a pimp at the Vanilla Unicorn and street girls outside the night spots. It also gives police a reason to patrol those streets: when a bystander NPC sees what is going on, a call can reach the police. Staff do not have to run any of it. It is for 18+ servers only, and it checks the character's age.
+
+---
+
 ## Features
 
 ### Core Functionality
@@ -17,6 +23,14 @@ Adapted from MH Hookers by MaDHouSe for DPS Development.
 - **Stress relief system** (default: jg-hud state bags; configurable to qb-hud/custom/none)
 - **Age verification** (18+ characters only based on birthdate, re-checked server-side on every paid action)
 
+### Street Corners
+- **Street girls outside the night spots** - 19 corners in `Config.Corners`, from the Vanilla Unicorn and the casinos to Sandy Shores and Paleto
+- **Night only** - they work from 21:00 to 05:00 game time. The pair outside the Vanilla Unicorn is there all day
+- **Call-outs** - a girl calls out to players who walk past, with a spoken line and floating text
+- **Pick-up** - talk to her with ox_target, or stop a car beside her, then press **E** as in the pimp flow
+- **Never in the road** - each spot is moved to the pavement. A spot too close to the road or to a parked car is skipped
+- **One map blip** at the Vanilla Unicorn
+
 ### Smart Police Dispatch AI
 - **Witness-based detection** - Requires nearby NPCs to "see" the activity
 - **Dynamic risk calculation** based on:
@@ -25,7 +39,7 @@ Adapted from MH Hookers by MaDHouSe for DPS Development.
   - **Weather** - Rain/fog reduces visibility and risk
   - **Witness count** - More witnesses = higher chance of police
 - **Delayed dispatch** - Secluded areas have 30-60s delay, simulating bystander reports
-- **Configurable dispatch systems**: ps-dispatch, cd_dispatch, qs-dispatch, or custom
+- **Configurable dispatch systems**: wasabi_mdt (default), ps-dispatch, cd_dispatch, qs-dispatch, or custom
 - **5-minute cooldown** between police alerts per player
 
 ### Performance Optimizations (v2.2.0)
@@ -41,6 +55,18 @@ Adapted from MH Hookers by MaDHouSe for DPS Development.
 - **ox_target** for NPC interactions
 - **Locale system** with JSON translations
 - **Clean, documented code** with LuaLS annotations
+
+---
+
+## On its own, and with other scripts
+
+**On its own.** With a framework (Qbox on DelPerroSands), ox_lib and ox_target you get the pimp at the Vanilla Unicorn, the street corners, the car flow, the two paid services and the age check. The risk system still runs, but with no dispatch script no call is sent. The script sees that the dispatch resource is missing and switches police alerts off without errors.
+
+**With a paid police computer (wasabi_mdt).** This is the default. When a witness NPC reports the player, a "disturbance" call from an anonymous caller appears on the MDT with the street name. In a quiet spot the call comes 30 to 60 seconds late, as if someone found the scene afterwards. Police get a reason to drive over and the player gets a reason to pick the spot with care. The script only sends a call through the wasabi_mdt `CreateDispatch` export. It reads and changes nothing else in the MDT.
+
+**With another dispatch script (qs-dispatch, cd_dispatch, ps-dispatch).** Set `Config.Police.DispatchType` to the one you run. The call goes out as a suspicious activity alert with a map blip. qs-dispatch and cd_dispatch are paid scripts. ps-dispatch is free. Each one is called through a single export or event, and the call is skipped if it fails.
+
+**With a paid HUD (jg-hud).** Each service lowers the player's stress by 15 to 25 points. With jg-hud the script lowers the `stress` state bag on the player, and the HUD shows the new value. It does not call any jg-hud code. Set `Config.StressSystem` to `'qb-hud'`, `'custom'` or `'none'` for other setups.
 
 ---
 
@@ -68,7 +94,7 @@ Located in `config.lua` - Police section:
 ```lua
 Config.Police = {
     Enabled = true,
-    DispatchType = 'qs-dispatch',  -- 'ps-dispatch', 'cd_dispatch', 'qs-dispatch', 'custom', 'none'
+    DispatchType = 'wasabi_mdt',  -- 'wasabi_mdt', 'ps-dispatch', 'cd_dispatch', 'qs-dispatch', 'custom', 'none'
 
     -- Witness system
     RequireWitness = true,
@@ -183,7 +209,16 @@ The script calculates risk dynamically with witness detection:
 
 ## Police Dispatch Integration
 
-### QS-Dispatch (Default)
+Already configured for qs-dispatch. Just ensure it's installed and running.
+### wasabi_mdt (Default)
+
+Already configured for wasabi_mdt. Just ensure it's installed and running.
+
+### QS-Dispatch
+
+```lua
+Config.Police.DispatchType = 'qs-dispatch'
+```
 
 Already configured for qs-dispatch. Just ensure it's installed and running.
 
@@ -231,7 +266,7 @@ Config.AgeVerification = false
 - **qbx_core** OR **qb-core** OR **es_extended** - Framework (one required)
 - **ox_lib** - Notifications, progress bars, locale, context menus, zones
 - **ox_target** - NPC interactions
-- **One of:** ps-dispatch, cd_dispatch, qs-dispatch (optional). If none is installed the police system soft-detects the absence and no-ops cleanly.
+- **One of:** wasabi_mdt, ps-dispatch, cd_dispatch, qs-dispatch (optional). If none is installed the police system soft-detects the absence and no-ops cleanly.
 
 > **Note:** oxmysql was previously listed but this resource performs no SQL. It was removed as a dependency in v2.3.1.
 
@@ -251,7 +286,8 @@ dps-hookers/
 ├── locales/
 │   └── en.json             # English translations
 ├── client/
-│   └── main.lua            # Client-side logic (optimized)
+│   ├── main.lua            # Client-side logic (optimized)
+│   └── corners.lua         # Street corners
 ├── server/
 │   └── main.lua            # Server-side logic
 └── README.md               # This file
@@ -409,6 +445,12 @@ Planned features for future releases. **None of the items below are implemented 
 
 ## Changelog
 
+### Recent changes
+
+- **12 November 2026.** README: what it is for, how it works alone and with paid scripts, other DPS scripts. The README now shows wasabi_mdt as the default dispatch, to match `config.lua`.
+- **30 October 2026.** Street corners: two fixes to the pavement check, which read the game's position results in the wrong shape and threw a client error.
+- **29 October 2026.** Street corners added: girls outside 19 night spots, call-outs to people who walk past, a pavement rule so nobody stands in the road, night hours of 21:00 to 05:00, and one blip at the Vanilla Unicorn.
+
 ### v2.3.1 (Qbox + Security Fix Pass)
 - **Added Qbox (qbx_core) bridge** (`bridge/qbx.lua`) using discrete exports - qbx_core has no `GetCoreObject()`, which made the qb bridge throw and killed the resource on a pure Qbox box. init.lua now detects `qbx_core` first; bridge load is pcall-wrapped so a bridge fault fails loudly instead of nil-cascading.
 - **Risk engine moved client-side** - police risk (peds/clock/weather/street name) is now computed on the client where those natives actually work, then validated + rolled server-side. Previously these client-only natives ran on the server and silently returned 0/blank.
@@ -449,3 +491,39 @@ Planned features for future releases. **None of the items below are implemented 
 - Initial release by MaDHouSe79
 - Adaptation and rewrites by DaemonAlex
 
+---
+
+## Author
+
+Made by [DaemonAlex](https://github.com/DaemonAlex) for DelPerroSands.
+
+This is an adaptation of MH Hookers by MaDHouSe79. See Credits above.
+
+## Other DPS scripts
+
+All of these are made for DelPerroSands and run together on one Qbox server. Each one works on
+its own. The ones marked "pairs with" do more when both are running.
+
+| Script | What it does |
+|---|---|
+| [dps-inventory](https://github.com/DaemonAlex/dps-inventory) | The inventory: ox_inventory with equipment slots, backpacks, armour plates and a self status panel, in the DelPerroSands colours. |
+| [dps-medical](https://github.com/DaemonAlex/dps-medical) | Patient records, illness and diagnostic tests. A companion to wasabi_ambulance. Pairs with dps-inventory: symptoms and diagnoses show on the status panel. |
+| [dps-insurance](https://github.com/DaemonAlex/dps-insurance) | Ties m-Insurance into the MDT, impound, hospital and medical chart. Pairs with dps-medical. |
+| [dps-studio](https://github.com/DaemonAlex/dps-studio) | Build rooms, doors and portals in game from one panel (`/studio`), with owners and managers so staff do not have to support them. |
+| [dps-shops](https://github.com/DaemonAlex/dps-shops) | Shop clerks who greet and react to a robbery, then player-owned shops. |
+| [dps-fleet](https://github.com/DaemonAlex/dps-fleet) | Vehicle browser and workshop on one panel: extras, liveries and mods for emergency vehicles. |
+| [dps-parking](https://github.com/DaemonAlex/dps-parking) | Parking with valet, impound, violations and reserved spots. |
+| [dps-vehiclepersistence](https://github.com/DaemonAlex/dps-vehiclepersistence) | Vehicles stay where they were parked. Pairs with dps-parking. |
+| [dps-towjob](https://github.com/DaemonAlex/dps-towjob) | Queue-based tow job with jg-mechanic integration. |
+| [dps-services](https://github.com/DaemonAlex/dps-services) | Request a tow and follow it live on the lb-phone and lb-tablet. Pairs with dps-towjob. |
+| [dps-autoshops](https://github.com/DaemonAlex/dps-autoshops) | Self-service repair shops when no mechanic is on duty. |
+| [dps-cityworker](https://github.com/DaemonAlex/dps-cityworker) | City infrastructure job and career. |
+| [dps-ainpcs](https://github.com/DaemonAlex/dps-ainpcs) | NPCs you can talk to, with trust, quests and intel. |
+| [dps-badpeds](https://github.com/DaemonAlex/dps-badpeds) | Police interaction with NPCs: stops, arrests, intel and jail records. |
+| [dps-gangwars](https://github.com/DaemonAlex/dps-gangwars) | Ambient gang NPCs, territory population and war reinforcements. |
+| [dps-rotations](https://github.com/DaemonAlex/dps-rotations) | Moves dealers, harvests and other spots on a fixed schedule. |
+| [dps-trains](https://github.com/DaemonAlex/dps-trains) | The train system. Pairs with dps-trains-stock, dps-traintools and dps-transitapp. |
+| [dps-transitapp](https://github.com/DaemonAlex/dps-transitapp) | Live train arrival boards on the lb-phone. |
+| [dps-faceplant](https://github.com/DaemonAlex/dps-faceplant) | City help, reports and staff tools on the lb-phone and lb-tablet. |
+| [dps-chat](https://github.com/DaemonAlex/dps-chat) | A command box for voice-only servers. No chat feed. |
+| [dps-filmmode](https://github.com/DaemonAlex/dps-filmmode) | One key hides every HUD layer and gives a smooth free camera for recording. |
